@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<!-- 
+
+Photo Color Picker Version 20250819a
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org/>
+
+ADDENDUM:
+
+This is free and unlicensed software, released into the public domain.  
+You are free to use it for any purpose, including commercial use.  
+However, if you choose to sell this free code just to line your pockets, it merely shows the kind of wood you're made of — and in this case, it’s rather rotten.
+
+-->
+<html lang="de">
+<head>
+	<meta charset="UTF-8" />
+	<title>Color Picker Tool mit Farbstimmungen</title>
+	<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🔍</text></svg>">
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<style>
+		:root { 
+			--puck-size: calc(18px + 0.5vw); 
+		}
+
+		* { 
+			box-sizing: border-box; 
+		}
+
+		body {
+			margin: 0;
+			height: 100vh;
+			display: flex;
+			font-family: system-ui, Arial, sans-serif;
+			background: #f5f5f5;
+			color: #111;
+		}
+
+		canvas {
+			display: block;
+			width: 100%; 
+			height: auto;
+			touch-action: none; 
+			border: 1px solid #333;
+		}
+
+		#canvasWrapper {
+			position: relative;
+			margin: 16px auto 8px;
+		}
+
+		.colorBox {
+			width: 90px;
+			height: 90px;
+			border: 1px solid #333;
+			display: grid;
+			place-items: center;
+			color: transparent;
+			font-size: 12px;
+			border-radius: 6px;
+			user-select: text;
+		}
+
+		#colors {
+			display: flex;
+			gap: 10px;
+			margin: 12px 0 24px;
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.hint {
+			font-size: 12px; color: #666; margin-top: 6px; 
+		}
+
+		input[type="file"] {
+			margin: 4px 0 8px; 
+		}
+
+		#mood-selector {
+			margin-top: 20px;
+			text-align: left;
+		}
+
+		#main {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			padding: 16px;
+			overflow: auto;
+		}
+
+		#main .centered {
+			align-self: center;
+		}
+
+		.puck {
+			position: absolute;
+			width: var(--puck-size);
+			height: var(--puck-size);
+			border-radius: 50%;
+			border: 2px solid #fff;
+			box-shadow: 0 0 3px rgba(0,0,0,.6);
+			cursor: grab;
+			z-index: 2;
+		}
+
+		#toolbar { 
+			width: 100%; 
+			max-width: 300px; 
+		}
+
+		#toggleCanvas {
+			display:none;
+		}
+
+	</style>
+</head>
+<body>
+	<main id="main">
+		<h1 class="centered">Farbschema finden</h1>
+		<h3 class="centered" style="margin-top:-1em;">Find color scheme</h3>
+		<div id="toolbar" class="centered">
+			<input type="file" id="upload" accept="image/*">
+			<span class="hint">Bild wählen / choose a pic</span>
+		</div>
+
+		<button id="toggleCanvas">Bild verstecken / hide image</button>
+		<div id="canvasWrapper">
+			<canvas id="imageCanvas"></canvas>
+		</div>
+
+		<div id="colors"></div>
+
+		<div id="mood-selector" class="centered">
+			<p>Farbstimmung wählen / Pick color mood</p>
+			<label><input type="radio" name="mood" value="bold"> Kräftig (Bold)</label><br>
+			<label><input type="radio" name="mood" value="neutral"> Neutral (Neutral)</label><br>
+			<label><input type="radio" name="mood" value="muted"> Gedämpft (Muted)</label><br>
+			<label><input type="radio" name="mood" value="vivid"> Leuchtend (Vivid)</label><br>
+			<label><input type="radio" name="mood" value="pastel"> Pastell (Pastel)</label><br>
+			<label><input type="radio" name="mood" value="dark"> Dunkel (Dark)</label><br>
+			<label><input type="radio" name="mood" value="soft"> Sanft (Soft)</label><br>
+			<label><input type="radio" name="mood" value="warm"> Warm (Warm)</label><br>
+			<label><input type="radio" name="mood" value="cool"> Kalt (Cool)</label><br>
+			<label><input type="radio" name="mood" value="earthy"> Erdig (Earthy)</label><br>
+			<label><input type="radio" name="mood" value="metallic"> Metallisch (Metallic)</label><br>
+			<label><input type="radio" name="mood" value="neon"> Neon (Neon)</label><br>
+			<label><input type="radio" name="mood" value="other" checked> Original (Original)</label>
+		</div>
+
+		<p style="min-height:5vh;">&nbsp;</p>
+	</main>
+  <!-- ATTENTION! For real privacy, download the ColorThief.js and include it locally. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+  <script>
+    const upload   = document.getElementById('upload');
+    const wrapper  = document.getElementById('canvasWrapper');
+    const canvas   = document.getElementById('imageCanvas');
+	canvas.style.display="none";
+    const ctx      = canvas.getContext('2d', { willReadFrequently: true });
+    const colorsEl = document.getElementById('colors');
+
+    const PUCK_SIZE = 18;
+	
+	const MAX_W = window.innerWidth - 32;  
+    const MAX_H =  window.innerHeight - 200;
+	
+    let img = new Image();
+    let pucks = [];      
+    let currentMood = 'other';
+    let imageData = null;   
+    let paletteRGB = [];    
+	
+	
+	const button = document.getElementById('toggleCanvas');
+  
+
+  button.addEventListener('click', () => {
+    if (canvas.style.display === 'none' || canvas.style.display === '') {
+      canvas.style.display = 'block';
+      button.textContent = 'Bild verstecken / hide image';
+	  pucks.forEach(puck => {
+    puck.style.display = 'block';
+  });
+    } else {
+      canvas.style.display = 'none';
+	   pucks.forEach(puck => {
+    puck.style.display = 'none';
+  });
+      button.textContent = 'Bild zeigen / show image';
+    }
+  });
+  
+  
+
+    // ---------- Hilfsfunktionen ----------
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+	
+	// --- Hilfsfunktionen für CIE Lab ---
+function rgbToXyz(r, g, b) {
+  // normalisieren
+  r = r / 255; g = g / 255; b = b / 255;
+  // Gamma-Korrektur (sRGB)
+  r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+  g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+  b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+
+  // Matrix sRGB → XYZ (D65)
+  const x = r * 0.4124 + g * 0.3576 + b * 0.1805;
+  const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  const z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+  return [x, y, z];
+}
+
+function xyzToLab(x, y, z) {
+  // D65 Referenzweiß
+  const refX = 0.95047, refY = 1.00000, refZ = 1.08883;
+  x = x / refX;
+  y = y / refY;
+  z = z / refZ;
+
+  function f(t) {
+    return t > 0.008856 ? Math.cbrt(t) : (7.787 * t) + 16/116;
+  }
+
+  const fx = f(x);
+  const fy = f(y);
+  const fz = f(z);
+
+  const L = (116 * fy) - 16;
+  const a = 500 * (fx - fy);
+  const b = 200 * (fy - fz);
+  return [L, a, b];
+}
+
+function rgbToLab(r,g,b){
+  const [x,y,z] = rgbToXyz(r,g,b);
+  return xyzToLab(x,y,z);
+}
+
+// Palette nach Lab sortieren
+function sortPaletteLab(palette){
+  return palette.slice().sort((c1, c2) => {
+    const [L1,a1,b1] = rgbToLab(c1[0],c1[1],c1[2]);
+    const [L2,a2,b2] = rgbToLab(c2[0],c2[1],c2[2]);
+    // erst nach L, dann a, dann b
+    if(L1 !== L2) return L1 - L2;
+    if(a1 !== a2) return a1 - a2;
+    return b1 - b2;
+  });
+}
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => {
+        const h = x.toString(16);
+        return h.length === 1 ? "0" + h : h;
+      }).join('');
+    }
+
+    function rgbToHsl(r,g,b){
+      r/=255; g/=255; b/=255;
+      const max=Math.max(r,g,b), min=Math.min(r,g,b);
+      let h, s, l=(max+min)/2;
+      if(max===min){ h=s=0; }
+      else {
+        const d=max-min;
+        s = l>0.5 ? d/(2-max-min) : d/(max+min);
+        switch(max){
+          case r: h=(g-b)/d+(g<b?6:0); break;
+          case g: h=(b-r)/d+2; break;
+          case b: h=(r-g)/d+4; break;
+        }
+        h/=6;
+      }
+      return [h*360, s, l];
+    }
+    function hslToRgb(h,s,l){
+      h/=360;
+      let r,g,b;
+      if(s===0){ r=g=b=l; }
+      else{
+        const hue2rgb=(p,q,t)=>{
+          if(t<0) t+=1; if(t>1) t-=1;
+          if(t<1/6) return p+(q-p)*6*t;
+          if(t<1/2) return q;
+          if(t<2/3) return p+(q-p)*(2/3-t)*6;
+          return p;
+        };
+        const q = l<0.5 ? l*(1+s) : l+s-l*s;
+        const p = 2*l - q;
+        r = hue2rgb(p,q,h+1/3);
+        g = hue2rgb(p,q,h);
+        b = hue2rgb(p,q,h-1/3);
+      }
+      return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+    }
+    function adjustColor([r,g,b], mood){
+      let [h,s,l] = rgbToHsl(r,g,b);
+      switch(mood){
+        case 'bold':    s = Math.min(1, s*1.3); l = clamp(l, 0.3, 0.7); break;
+        case 'muted':   s = s*0.40; break;
+        case 'neutral': s = 0.25 + s*0.30; l = 0.45 + (l-0.5)*0.20; break;
+        case 'vivid':   s = Math.min(1, s*1.6); l = Math.min(1, l*1.10); break;
+		case 'pastel':	s = s * 0.3; l = Math.min(1, l + 0.35); break;
+        case 'other':
+        default: break;
+      }
+      return hslToRgb(h,s,l);
+    }
+	
+	function adjustColorGenial([r,g,b], mood){ 
+    let [h,s,l] = rgbToHsl(r,g,b);
+
+    switch(mood){
+        case 'bold':      // Kräftig
+            s = Math.min(1, s*1.3); 
+            l = clamp(l, 0.3, 0.7); 
+            break;
+
+        case 'muted':     // Gedämpft
+            s = s*0.40; 
+            break;
+
+        case 'neutral':   // Neutral
+            s = 0.25 + s*0.30; 
+            l = 0.45 + (l-0.5)*0.20; 
+            break;
+
+        case 'vivid':     // Leuchtend
+            s = Math.min(1, s*1.6); 
+            l = Math.min(1, l*1.10); 
+            break;
+
+        case 'pastel':    // Sanft / Hell
+            s = s * 0.3; 
+            l = Math.min(1, l + 0.35); 
+            break;
+
+        case 'dark':      // Dunkel / Dramatisch
+            l = l * 0.4; 
+            s = s * 0.9; 
+            break;
+
+        case 'soft':      // Sanft / Beruhigend
+            s = s * 0.5; 
+            l = Math.min(1, l + 0.2); 
+            break;
+
+        case 'warm':      // Warmton
+            h = (h + 360) % 360; // optional: verschiebe leicht zu Rot/Orange (~0°–45°)
+            s = Math.min(1, s * 1.1); 
+            l = Math.min(1, l * 1.05); 
+            break;
+
+        case 'cool':      // Kaltton
+            h = (h + 180) % 360; // optional: verschiebe leicht zu Blau/Grün (~180°)
+            s = Math.min(1, s * 1.1); 
+            break;
+
+        case 'earthy':    // Erdig
+            h = (h + 20) % 360;  // leicht ins Braun/Orange
+            s = s * 0.6; 
+            l = 0.4 + l*0.3; 
+            break;
+
+        case 'metallic':  // Metallisch (simuliert)
+            s = s * 0.2; 
+            l = Math.min(1, l * 1.2); 
+            break;
+
+        case 'neon':      // Neon / Grell
+            s = Math.min(1, s*2.0); 
+            l = Math.min(1, l*1.1);
+            break;
+
+        case 'other':
+        default: 
+            break;
+    }
+		;
+    return hslToRgb(h,s,l);
+}
+
+
+    function colorDistance(c1, c2){
+      const dr = c1[0]-c2[0], dg = c1[1]-c2[1], db = c1[2]-c2[2];
+      return dr*dr + dg*dg + db*db; // quadratische Distanz reicht
+    }
+
+    // Suche die Position des Pixels, der einer Ziel-Farbe am nächsten kommt
+    function findColorPosition(targetRGB){
+      const { width, height, data } = imageData;
+      let bestD = Infinity, bestX = 0, bestY = 0;
+      const step = Math.max(1, Math.floor(Math.min(width, height) / 200)); // adaptives Downsampling
+      for(let y=0; y<height; y += step){
+        let row = y * width * 4;
+        for(let x=0; x<width; x += step){
+          const i = row + x*4;
+          const d = colorDistance([data[i],data[i+1],data[i+2]], targetRGB);
+          if(d < bestD){ bestD=d; bestX=x; bestY=y; }
+        }
+      }
+      return { x: bestX, y: bestY };
+    }
+
+    // ---------- Pucks ----------
+    function createPuckAtCanvasPos(cx, cy, index){
+      const puck = document.createElement('div');
+      puck.className = 'puck';
+      puck.dataset.index = String(index);
+      // CSS-Position (Wrapper & Canvas haben exakt gleiche Größe)
+      puck.style.left = (cx - PUCK_SIZE/2) + 'px';
+      puck.style.top  = (cy - PUCK_SIZE/2) + 'px';
+      wrapper.appendChild(puck);
+      enableDrag(puck);
+      pucks.push(puck);
+    }
+
+    function setupColorBoxes(n){
+      colorsEl.innerHTML = '';
+      for(let i=0; i<n; i++){
+        const box = document.createElement('div');
+        box.className = 'colorBox';
+        box.id = 'colorBox-' + i;
+        colorsEl.appendChild(box);
+      }
+    }
+
+    // Lese die Farbe unter einem Puck (Canvas-Koordinate!) und wende Mood an
+    function updatePuckAndBoxFromPosition(puck){
+      const idx = Number(puck.dataset.index);
+      const cx = Math.round(parseFloat(puck.style.left) + PUCK_SIZE/2);
+      const cy = Math.round(parseFloat(puck.style.top)  + PUCK_SIZE/2);
+
+      // Begrenzung (Sicherheitsnetz)
+      const maxX = canvas.width  - 1;
+      const maxY = canvas.height - 1;
+      const x = clamp(cx, 0, maxX);
+      const y = clamp(cy, 0, maxY);
+
+      const px = ctx.getImageData(x, y, 1, 1).data;
+      const base = [px[0], px[1], px[2]];
+      const shown = adjustColorGenial(base, currentMood);
+
+      puck.style.background = `rgb(${shown[0]},${shown[1]},${shown[2]})`;
+
+      const box = document.getElementById('colorBox-'+idx);
+      if(box){
+        box.style.background = `rgb(${shown[0]},${shown[1]},${shown[2]})`;
+        box.textContent = rgbToHex(shown[0], shown[1], shown[2]);
+      }
+    }
+
+    function updateAllFromPositions(){
+      pucks.forEach(updatePuckAndBoxFromPosition);
+    }
+
+    function enableDrag(puck){
+      let offsetX = 0, offsetY = 0;
+      function onDown(e){
+        const rect = wrapper.getBoundingClientRect();
+        const startX = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const startY = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        offsetX = startX - parseFloat(puck.style.left);
+        offsetY = startY - parseFloat(puck.style.top);
+        puck.style.cursor = 'grabbing';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onUp);
+      }
+      function onMove(e){
+        e.preventDefault?.();
+        const rect = wrapper.getBoundingClientRect();
+        const pX = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left - offsetX;
+        const pY = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top - offsetY;
+
+        // Begrenzen innerhalb des Wrappers
+        const maxLeft = wrapper.clientWidth  - PUCK_SIZE;
+        const maxTop  = wrapper.clientHeight - PUCK_SIZE;
+        puck.style.left = clamp(pX, 0, maxLeft) + 'px';
+        puck.style.top  = clamp(pY, 0, maxTop)  + 'px';
+
+        updatePuckAndBoxFromPosition(puck); // live aktualisieren
+      }
+      function onUp(){
+        puck.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+      }
+      puck.addEventListener('mousedown', onDown);
+      puck.addEventListener('touchstart', onDown, { passive: true });
+    }
+
+    // ---------- Bild laden & initialisieren ----------
+    function drawImageScaledToCanvas(){
+      // Canvas passend skalieren (ohne CSS-Skalierung)
+      const scale = Math.min(MAX_W / img.width, MAX_H / img.height, 1);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+
+      canvas.width = w;
+      canvas.height = h;
+      wrapper.style.width  = w + 'px';
+      wrapper.style.height = h + 'px';
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      imageData = ctx.getImageData(0, 0, w, h);
+    }
+
+    function placePucksFromPalette(){
+      // Pucks entfernen
+      pucks.forEach(p => p.remove());
+      pucks = [];
+
+      setupColorBoxes(paletteRGB.length);
+
+      // Für jede Palettenfarbe die beste Position finden und Puck dort platzieren
+      paletteRGB.forEach((col, i) => {
+        const pos = findColorPosition(col);  // pos in Canvas-Koordinaten
+        createPuckAtCanvasPos(pos.x, pos.y, i);
+      });
+
+      updateAllFromPositions(); // Mood auf aktuelle Positionen anwenden
+    }
+
+    // ---------- Events ----------
+    // Mood – nur Farben neu berechnen (Positionen bleiben!)
+    document.querySelectorAll('input[name="mood"]').forEach(r => {
+      r.addEventListener('change', e => {
+        currentMood = e.target.value;
+        updateAllFromPositions(); // KEIN Reset, nur Recolor
+      });
+    });
+
+    upload.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        img.onload = () => {
+          drawImageScaledToCanvas();
+
+          // Palette bestimmen (aus Originalbild)
+          const ct = new ColorThief();
+          // ColorThief braucht ein <img> Element; wir verwenden das geladene
+          paletteRGB = ct.getPalette(img, 5);
+          paletteRGB = sortPaletteLab(paletteRGB);
+
+          placePucksFromPalette();
+		  canvas.style.display="block";
+		  button.style.display="block";
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Optional: Startzustand ohne Bild (keine Pucks/Palette).
+  </script>
+</body>
+</html>
