@@ -170,7 +170,7 @@ const map = L.map('map', {
   dragging: false,
 }).setView(STARTPOS, MAP_ZOOM);
 
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom: MAP_ZOOM, maxZoom: MAP_ZOOM, keepBuffer: 2 }).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom: MAP_ZOOM, maxZoom: MAP_ZOOM, keepBuffer: 2, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>' }).addTo(map);
 
 // Starten, wenn Auto fährt
 function startDriving() {
