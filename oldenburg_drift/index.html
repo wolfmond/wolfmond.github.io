@@ -3,7 +3,7 @@
 
 All rights reserved. At least at this very moment; I'm planning to realease this game into the Creative Commons, but please let me finish it first. It's still super buggy and I have a lot of Ideas. It's playable, yet; but don't expect too much. This is merely a draft, yet. Greetz, Wolfmond
 
-Current Version: 2025-09-22_23.37
+Current Version: 2025-09-22_23.46
 
 -->
 <html lang="de">
@@ -226,7 +226,7 @@ const STARTPOS = [53.143559, 8.22416];
 
 /* ---------- MAP ---------- */
 const map = L.map('map', { keyboard:false, zoomControl:false, minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false, dragging:false, boxZoom:false }).setView(STARTPOS, MAP_ZOOM);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, keepBuffer:2, attribution: '' }).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, keepBuffer:2, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>' }).addTo(map);
 document.documentElement.style.setProperty('--map-hue', MAP_HUE_ROTATION + 'deg');
 const canvasRenderer = L.canvas({ padding: 0.5 });
 
