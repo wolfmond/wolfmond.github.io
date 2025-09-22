@@ -3,559 +3,549 @@
 
 All rights reserved. At least at this very moment; I'm planning to realease this game into the Creative Commons, but please let me finish it first. It's still super buggy and I have a lot of Ideas. It's playable, yet; but don't expect too much. This is merely a draft, yet. Greetz, Wolfmond
 
-Current Version: 2025-09-22_17.56
+Current Version: 2025-09-22_23.06
 
 -->
 <html lang="de">
 <head>
-<meta charset="utf-8"/>
-<title>Oldenburg Kart — Perfekt (stars + sounds + fixed zoom)</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Oldenburg Kart — Optimized + Music Menu</title>
 <script>
-
-const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use. All Rights Reserved. No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. Runs best & smooth in Chrome. Background Driving Music: In the seventies 1O34 by Setuniman -- https://freesound.org/s/369718/ -- License: Attribution NonCommercial 4.0";
+const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use. All Rights Reserved. No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
 
 // Zeigt eine Bestätigungsbox an
 if (!confirm(message)) {
   // Wenn der Nutzer auf "Abbrechen" klickt
   window.location.href = "about:blank";
 }
-
-
 </script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+  :root{--bg:#fff;--panel:#fff;--muted:#666}
   html,body,#map { height:100%; margin:0; padding:0; font-family: system-ui, Arial, sans-serif; }
   #map { position:relative; overflow:hidden; background:#e7eef8; }
-  
-  .star-icon {
-    width: 24px;
-    height: 24px;
-    background: none;
-    pointer-events: none;
-    animation: pulse 1.5s infinite;
-    background-color: rgba(0,0,0,0.5);
-    padding: 2px;
-    border-radius: 50%;
-  }
-  .star-icon svg polygon {
-    fill: #ffd83d;
-    stroke: #ffdc4d;
-    stroke-width: 1;
-  }
-  @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1.4);
-      opacity: 0.6;
-    }
-  }
 
-  .rotate-wrapper { position:absolute; inset:0; transform-origin:50% 50%; will-change:transform; }
-
-  .car-center {
-    position: absolute; z-index: 12000; left: 50%; top: 50%;
-    transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(180deg,#4aa3ff,#2b6fd6);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.35); border: 3px solid white; pointer-events: none;
-    display:flex; align-items:center; justify-content:center;
-    transition: box-shadow 120ms linear, transform 120ms linear;
-  }
+  /* --- Car UI --- */
+  .car-center { position: absolute; z-index: 12000; left:50%; top:50%; transform: translate(-50%, -50%); width:36px; height:36px; border-radius:50%; background:linear-gradient(180deg,#4aa3ff,#2b6fd6); box-shadow:0 6px 14px rgba(0,0,0,0.35); border:3px solid white; pointer-events:none; display:flex; align-items:center; justify-content:center; transition: box-shadow 120ms linear, transform 120ms linear; }
   .car-center.bounce { box-shadow: 0 4px 12px rgba(0,0,0,0.55); transform: translate(-50%,-48%); }
-
   .car-arrow { width:0;height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:14px solid rgba(255,255,255,0.95); }
 
-  .score { position: absolute; top: 12px; right: 12px; z-index: 14000; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px; font-weight:700; display:flex; gap:12px; align-items:center; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-  .loader { position: absolute; top: 12px; left: 12px; z-index: 14000; background: rgba(255,255,255,0.96); padding: 10px; border-radius: 8px; font-size:13px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); min-width:220px; }
-  .touch-controls { position: absolute; bottom: 12px; left: 12px; z-index: 14000; display:flex; gap:8px; display:none;}
-  .btn { background: rgba(255,255,255,0.95); border-radius:10px; padding:8px 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); font-weight:700; user-select:none; touch-action: none; }
-  @media (max-width:600px){ .loader { left:8px; right:8px; min-width:auto; font-size:12px; padding:8px; } .score { right:8px; top:8px; padding:6px 8px; } .car-center { width:32px; height:32px; border-width:2px; } }
-  .finish-overlay { position: absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:16000; background: rgba(255,255,255,0.96); padding:18px 22px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); display:none; font-weight:800; }
-  /* tile color rotation uses CSS variable --map-hue */
+  .score { position:absolute; top:12px; right:12px; z-index:14000; background: rgba(255,255,255,0.95); padding:8px 12px; border-radius:8px; font-weight:700; display:flex; gap:12px; align-items:center; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+  .loader { position:absolute; top:12px; left:12px; z-index:14000; background: rgba(255,255,255,0.96); padding:10px; border-radius:8px; font-size:13px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); min-width:220px; }
+  .finish-overlay { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:16000; background: rgba(255,255,255,0.96); padding:18px 22px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); display:none; font-weight:800; }
+
+  /* --- Music menu (z-index high) --- */
+  .menu-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.98);width:min(860px,95vw);background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,0.12);border-radius:12px;padding:18px;opacity:0;pointer-events:none;transition:opacity .22s ease, transform .22s ease;z-index:20050}
+  .menu-panel.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+  .menu-inner{display:flex;flex-direction:column;gap:12px}
+  .iframe-wrap{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.06)}
+  #mixcloudPlayer{width:100%;height:160px;border:0;display:block}
+  /* overlay text sits visually over iframe but does not block clicks */
+  .iframe-overlay{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,0.0),rgba(255,255,255,0.0));pointer-events:none}
+  .overlay-text{background:rgba(255,255,255,0.02);padding:10px 14px;border-radius:8px;font-weight:600;color:#333}
+  .mini-status{font-size:0.9rem;color:var(--muted);text-align:center;margin-top:6px}
+
+  @media (max-width:480px){ #mixcloudPlayer{height:120px} .menu-panel{padding:12px} }
+  
+  .controls-help { font-size:0.92rem; color:var(--muted); margin-top:10px; text-align:center; display:flex; flex-direction:column; gap:6px; }
+.help-title { font-weight:700; color:#222; margin-bottom:2px; }
+.help-list { display:flex; flex-direction:column; gap:6px; align-items:center; }
+.controls-help kbd {
+  display:inline-block; padding:4px 7px; border-radius:6px; background:#fafafa;
+  border:1px solid rgba(0,0,0,0.06); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.03);
+  font-weight:700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (max-width:480px){ .controls-help { font-size:0.85rem; } .controls-help kbd{ padding:3px 6px } }
+
+
+  
   .leaflet-tile { filter: hue-rotate(var(--map-hue, 0deg)) saturate(0.3) contrast(1.03) brightness(1.02) invert(1); }
   
-  #overlayed {
-  position: absolute;  /* Über der Karte */
-  top: 0;
-  left: 0;
-  height: 100vh;       /* Ganze Höhe */
-  width: 100vw;        /* Ganze Breite */
-  z-index: 1000;       /* Über der Leaflet-Karte (Leaflet nutzt ~z-index: 400-600) */
-  pointer-events: none; /* Optional: Overlay ignoriert Mausklicks, Karte bleibt interaktiv */
-}
+  
 </style>
 </head>
 <body>
-<div id="map"></div>
-<div class="car-center" id="carDiv" title="Dein Wagen"><div class="car-arrow" id="carArrow"></div></div>
+  <div id="map"></div>
 
-<div class="loader" id="loader">
-  <div style="font-weight:700">Oldenburg Kart — Perfect</div>
-  <div class="small">Lade ein GeoJSON (FeatureCollection mit LineString). Sterne-Abstand: <strong>100 m</strong>.</div>
-  <input id="geoFile" type="file" accept="application/json,application/geo+json" />
-  <div style="margin-top:8px" class="row"><button id="centerBtn" style="min-width:80px">Zentrieren</button> <button id="resetBtn" style="min-width:80px">Reset</button></div>
-</div>
+  <div class="car-center" id="carDiv" title="Dein Wagen"><div class="car-arrow" id="carArrow"></div></div>
 
-<div class="score"><div>Score: <span class="value" id="score">0</span></div><div class="hs" id="hs">Highscore: 0</div></div>
-
-<div class="touch-controls" id="touchControls" aria-hidden="true">
-  <div class="btn" id="tLeft">◀</div>
-  <div style="display:flex;flex-direction:column;gap:8px">
-    <div class="btn" id="tUp">▲</div>
-    <div class="btn" id="tDown">▼</div>
+  <div class="loader" id="loader">
+    <div style="font-weight:700">Oldenburg Kart — Optimized</div>
+    <div class="small">Lade ein GeoJSON (FeatureCollection mit LineString). Standard Sterne-Abstand: <strong>100 m</strong>.</div>
+    <input id="geoFile" type="file" accept="application/json,application/geo+json" />
+    <div style="margin-top:8px" class="row"><button id="centerBtn" style="min-width:80px">Zentrieren</button> <button id="resetBtn" style="min-width:80px">Reset</button></div>
   </div>
-  <div class="btn" id="tRight">▶</div>
+
+  <div class="score"><div>Score: <span id="score">0</span></div><div id="hs">Highscore: 0</div></div>
+  <div class="finish-overlay" id="finishOverlay">Strecke beendet 🎉</div>
+
+  <!-- Musik-Menu (Space toggled) -->
+  <div class="menu-panel" id="menuPanel" aria-hidden="true">
+    <div class="menu-inner">
+      <div class="iframe-wrap">
+        <!-- Passe das feed URL nach Bedarf an -->
+        <iframe id="mixcloudPlayer" src="https://www.mixcloud.com/widget/iframe/?feed=https://www.mixcloud.com/DarknessForever/neonvisions1-07ef66c492e097d6b34282657dbfa5bd/&hide_cover=1&hide_tracklist=1&mini=1" allow="encrypted-media"></iframe>
+        <div class="iframe-overlay" id="iframeOverlay"><div class="overlay-text" id="overlayText">Einmal in den Player klicken und Play drücken</div></div>
+      </div>
+      <!--<div class="mini-status" id="miniStatus">Warte auf Interaktion…</div>-->
+	  
+	  <div class="controls-help" id="controlsHelp" aria-live="polite">
+  <div class="help-title">Tastenbelegung</div>
+  <div class="help-list">
+    <div><kbd>1–9</kbd> Speed ändern — aktueller Gang: <strong id="controlsHelpGear">1</strong></div>
+    <div><kbd>M</kbd> Musik an/aus</div>
+    <div><kbd>Leertaste</kbd> Menü öffnen / schließen</div>
+  </div>
 </div>
 
-<div class="finish-overlay" id="finishOverlay">Strecke beendet 🎉</div>
+    </div>
+  </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/zzfx@1.3.2/ZzFXMicro.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
 
+<!-- Mixcloud widget API (für PlayerWidget) -->
+<script src="https://widget.mixcloud.com/media/js/widgetApi.js"></script>
+
 <script>
+/* ============================
+   Integrierte Spiel-Logik (wie vorher, optimiert)
+   ============================ */
 
-// ---------------- CONFIG ----------------
-document.addEventListener('click', ()=>{ console.log('click -> try zzfx'); try{ zzfx(0.12,0,440,0.01,0.12,0.2,1,0,0,0,0); }catch(e){ console.error(e); } }, {once:true});
-
+/* ---------- CONFIG ---------- */
 const MAP_ZOOM = 19;
-const MAP_HUE_ROTATION = 90; // konstante für color-rotation der tiles; kannst du anpassen
-document.documentElement.style.setProperty('--map-hue', MAP_HUE_ROTATION + 'deg');
-document.documentElement.style.setProperty('--map-hue', MAP_HUE_ROTATION + 'deg');
-
-const STAR_SPACING = 10;
-const CAR_SPEED = 30.0;
-const ROTATION_SPEED = 50;
-const FRICTION = 2.0; // siehe Erklärung oben
-const MAX_REVERSE_SPEED = - (CAR_SPEED * 0.45);
-const STARTPOS = [53.143559, 8.22416]
-
-const Z_ON = 12, Z_NEAR = 20, Z_BORDER = 28;
+const MAP_HUE_ROTATION = 90;
+const STAR_SPACING = 100; // wichtig: nicht 10!
+const MAX_STARS = 800;
 const PICKUP_PIXEL_DIST = 14;
 const FINISH_DISTANCE_METERS = 8;
-
-const BOUNCE_FACTOR = 0.52;
-const MIN_BOUNCE_SPEED = 2.0;
-
+//const SPEED_GEARS = {1:{speed:15,accel:10},2:{speed:25,accel:15},3:{speed:35,accel:20},4:{speed:45,accel:25},5:{speed:60,accel:30}};
 const SPEED_GEARS = {
-1: { speed: 15, accel: 10 },
-2: { speed: 25, accel: 15 },
-3: { speed: 35, accel: 20 },
-4: { speed: 45, accel: 25 },
-5: { speed: 60, accel: 30 }
+  1: { speed: 15,  accel: 10 },
+  2: { speed: 25,  accel: 15 },
+  3: { speed: 35,  accel: 20 },
+  4: { speed: 45,  accel: 25 },
+  5: { speed: 60,  accel: 30 },
+  6: { speed: 75,  accel: 35 },
+  7: { speed: 95,  accel: 45 },
+  8: { speed: 120, accel: 60 },
+  9: { speed: 150, accel: 80 }
 };
-let currentGear = 1; // Start-Gang
+let currentGear = 1; 
+currentGear = Math.min(9, Math.max(1, Number(currentGear) || 1));
 
+let MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed; let ACCEL = SPEED_GEARS[currentGear].accel;
+const STARTPOS = [53.143559, 8.22416];
 
-// Diese beiden Konstanten durch Variablen ersetzen:
-let MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed;
-let ACCEL = SPEED_GEARS[currentGear].accel;
+/* ---------- MAP ---------- */
+const map = L.map('map', { keyboard:false, zoomControl:false, minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false, dragging:false, boxZoom:false }).setView(STARTPOS, MAP_ZOOM);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, keepBuffer:2, attribution: '' }).addTo(map);
+document.documentElement.style.setProperty('--map-hue', MAP_HUE_ROTATION + 'deg');
+const canvasRenderer = L.canvas({ padding: 0.5 });
 
-// Motorengeräusch (loop)
-const driveSound = new Howl({
-  src: ['assets/mp3/369718__setuniman__in-the-seventies-1o34.mp3'],
-  loop: true,
-  volume: 0.3
-});
-
-/*
-// Sterne-Sound (einmal)
-const pickupSound = new Howl({
-  //src: ['pickup.wav'],
-  src: ['pickup.wav'],
-  volume: 0.7
-});
-*/
-
-// ---------------- MAP (fixed zoom) ----------------
-const map = L.map('map', {
-  keyboard: false,
-  zoomControl: false,
-  minZoom: MAP_ZOOM,
-  maxZoom: MAP_ZOOM,
-  scrollWheelZoom: false,
-  doubleClickZoom: false,
-  touchZoom: false,
-  boxZoom: false,
-  dragging: false,
-}).setView(STARTPOS, MAP_ZOOM);
-
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom: MAP_ZOOM, maxZoom: MAP_ZOOM, keepBuffer: 2, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>' }).addTo(map);
-
-// Starten, wenn Auto fährt
-function startDriving() {
-  if (!driveSound.playing()) driveSound.play();
-}
-
-// Stoppen, wenn Auto steht
-function stopDriving() {
-  driveSound.stop();
-}
-
-// Sterne sammeln
-function collectStar() {
-  pickupSound.play();
-}
-
-// rotate wrapper
-let rotWrapper = null;
-map.whenReady(() => {
-  const container = map.getContainer();
-  const pane = container.querySelector('.leaflet-map-pane');
-  if(!pane) return;
-  const wrapper = document.createElement('div'); wrapper.className = 'rotate-wrapper';
-  container.insertBefore(wrapper, pane); wrapper.appendChild(pane); rotWrapper = wrapper;
-});
-
-// ---------------- DOM ----------------
+/* ---------- DOM ---------- */
+const mapDiv = document.getElementById('map');
 const carDiv = document.getElementById('carDiv');
-const scoreEl = document.getElementById('score');
-const hsEl = document.getElementById('hs');
-const geoFileEl = document.getElementById('geoFile');
 const loaderEl = document.getElementById('loader');
+const geoFileEl = document.getElementById('geoFile');
 const centerBtn = document.getElementById('centerBtn');
 const resetBtn = document.getElementById('resetBtn');
+const scoreEl = document.getElementById('score');
+const hsEl = document.getElementById('hs');
 const finishOverlay = document.getElementById('finishOverlay');
 
-// ---------------- STATE ----------------
-let roads = [], stars = [], score = 0, finished = false;
-hsEl.textContent = 'Highscore: ' + (localStorage.getItem('oldenburg_kart_highscore_custom') || 0);
+/* ---------- STATE ---------- */
+let roads = [], stars = [], roadPixelSegments = [], score = 0, finished = false;
+hsEl.textContent = 'Highscore: ' + (localStorage.getItem('oldenburg_kart_highscore_custom')||0);
 function updateScore(){ scoreEl.textContent = score; const prev = Number(localStorage.getItem('oldenburg_kart_highscore_custom')||0); if(score>prev){ localStorage.setItem('oldenburg_kart_highscore_custom', score); hsEl.textContent = 'Highscore: ' + score; } }
 
-// ---------------- CAR ----------------
-let carPos = L.latLng(STARTPOS[0],STARTPOS[1]);
-let headingDeg = 0;
-let displayedAngle = 0;
-let speed = 0;
-
-// ---------------- HELPERS ----------------
-const R = 6378137;
-function toRad(d){ return d * Math.PI / 180; }
-function toDeg(r){ return r * 180 / Math.PI; }
-function destinationPoint(lat, lon, distanceMeters, bearingDeg){
-  const δ = distanceMeters / R; const θ = toRad(bearingDeg);
-  const φ1 = toRad(lat); const λ1 = toRad(lon);
-  const sinφ1 = Math.sin(φ1), cosφ1 = Math.cos(φ1);
-  const sinδ = Math.sin(δ), cosδ = Math.cos(δ);
-  const φ2 = Math.asin(sinφ1 * cosδ + cosφ1 * sinδ * Math.cos(θ));
-  const λ2 = λ1 + Math.atan2(Math.sin(θ) * sinδ * cosφ1, cosδ - sinφ1 * Math.sin(φ2));
-  return L.latLng(toDeg(φ2), toDeg(λ2));
-}
-function shortestAngleDiff(target, current){ target = ((target%360)+360)%360; current = ((current%360)+360)%360; return (target - current + 540) % 360 - 180; }
+/* ---------- HELPERS ---------- */
+const R = 6378137; function toRad(d){return d*Math.PI/180;} function toDeg(r){return r*180/Math.PI;}
+function destinationPoint(lat, lon, distanceMeters, bearingDeg){ const δ = distanceMeters / R; const θ = toRad(bearingDeg); const φ1 = toRad(lat); const λ1 = toRad(lon); const sinφ1=Math.sin(φ1), cosφ1=Math.cos(φ1); const sinδ=Math.sin(δ), cosδ=Math.cos(δ); const φ2 = Math.asin(sinφ1*cosδ + cosφ1*sinδ*Math.cos(θ)); const λ2 = λ1 + Math.atan2(Math.sin(θ)*sinδ*cosφ1, cosδ - sinφ1*Math.sin(φ2)); return L.latLng(toDeg(φ2), toDeg(λ2)); }
 function flattenLatLngs(latlngs){ if(!Array.isArray(latlngs)) return []; if(latlngs.length>0 && Array.isArray(latlngs[0]) && typeof latlngs[0].lat === 'undefined') return latlngs.flat(); return latlngs; }
+function shortestAngleDiff(target,current){ target=((target%360)+360)%360; current=((current%360)+360)%360; return (target - current + 540)%360 - 180; }
 
-// ---------------- ROADS & STARS ----------------
+/* ---------- ROADS & STARS ---------- */
 function clearRoads(){ roads.forEach(r=>{ if(map.hasLayer(r)) map.removeLayer(r); }); roads=[]; roadPixelSegments=[]; }
-function clearStars(){ stars.forEach(s=>{ if(map.hasLayer(s)) map.removeLayer(s); }); stars=[]; }
+function clearStars(){ stars.forEach(s=>{ if(s.marker && map.hasLayer(s.marker)) map.removeLayer(s.marker); }); stars=[]; }
 
-function addRoadFromCoords(coords, style){
-  const latlngs = coords.map(c => L.latLng(c[1], c[0]));
-  const pl = L.polyline(latlngs, style || { color:'#2b6fd6', weight:4, opacity:0.95 }).addTo(map);
-  roads.push(pl); return pl;
+function addRoadFromCoords(coords, style){ const latlngs = coords.map(c => L.latLng(c[1], c[0])); const pl = L.polyline(latlngs, style || { color:'#2b6fd6', weight:4, opacity:0.95 }).addTo(map); roads.push(pl); return pl; }
+
+function samplePointsAlongPath(latlngs, spacingMeters){ const out=[]; if(!latlngs||latlngs.length<2) return out; let traveled=0, nextTarget=spacingMeters; for(let i=0;i<latlngs.length-1;i++){ const a=latlngs[i], b=latlngs[i+1]; const segLen = map.distance(a,b); while(nextTarget <= traveled + segLen){ const t = (nextTarget - traveled)/segLen; out.push(L.latLng(a.lat + (b.lat-a.lat)*t, a.lng + (b.lng-a.lng)*t)); nextTarget += spacingMeters; } traveled += segLen; } return out; }
+
+function placeStarsAll(spacingMeters){ clearStars(); if(roads.length===0) return; let pts = []; for(let ri=0; ri<roads.length; ri++){ const latlngs = flattenLatLngs(roads[ri].getLatLngs()); pts = pts.concat(samplePointsAlongPath(latlngs, spacingMeters)); }
+  if(pts.length > MAX_STARS){ const step = Math.ceil(pts.length / MAX_STARS); const filtered = []; for(let i=0;i<pts.length;i+=step) filtered.push(pts[i]); pts = filtered; }
+  //pts.forEach(p => { const m = L.circleMarker(p, { radius:6, weight:1, opacity:1, fillOpacity:0.95, interactive:false, renderer: canvasRenderer }).addTo(map); stars.push({marker: m, latlng: p}); });
+  
+  pts.forEach(p => {
+  const m = L.circleMarker(p, {
+    radius: 6,
+    weight: 1,                // Rand-Breite in px
+    color: '#ffdc4d',         // Randfarbe (stroke)
+    fillColor: '#ffd83d',     // Innenfarbe (fill) — dein Gelb
+    fillOpacity: 0.95,
+    opacity: 1,
+    interactive: false,
+    renderer: canvasRenderer
+  }).addTo(map);
+  stars.push({ marker: m, latlng: p });
+});
+  
+  
 }
 
-// create star divIcon exactly matching your css
-function createStarIcon(){
-  return L.divIcon({
-    className: '',
-    html: `<div class="star-icon">
-             <svg viewBox="0 0 100 100" width="100%" height="100%"><polygon points="50,5 61,39 98,39 68,59 79,91 50,70 21,91 32,59 2,39 39,39"/></svg>
-           </div>`,
-    iconSize: [24,24],
-    iconAnchor: [12,12]
-  });
-}
+/* ---------- PIXEL SEGMENTS CACHE ---------- */
+function rebuildRoadPixelSegments(){ roadPixelSegments = []; for(let ri=0; ri<roads.length; ri++){ const latlngs = flattenLatLngs(roads[ri].getLatLngs()); const segs = []; for(let i=0;i<latlngs.length-1;i++){ const a = map.latLngToLayerPoint(latlngs[i]); const b = map.latLngToLayerPoint(latlngs[i+1]); segs.push({a,b}); } roadPixelSegments.push(segs); } }
+map.on('zoomend moveend resize', ()=>{ rebuildRoadPixelSegments(); });
 
-function placeStarsAll(spacingMeters){
-  clearStars();
-  for(let ri=0; ri<roads.length; ri++){
-    const latlngs = flattenLatLngs(roads[ri].getLatLngs());
-    const samples = samplePointsAlongPath(latlngs, spacingMeters);
-    const pts = samples.length ? samples : latlngs;
-    pts.forEach(p=>{
-      const m = L.marker(p, { icon: createStarIcon(), interactive:false }).addTo(map);
-      stars.push(m);
-    });
-  }
-}
-
-function samplePointsAlongPath(latlngs, spacingMeters){
-  const out=[]; if(!latlngs||latlngs.length<2) return out;
-  let traveled=0, nextTarget=spacingMeters;
-  for(let i=0;i<latlngs.length-1;i++){
-    const a=latlngs[i], b=latlngs[i+1]; const segLen = map.distance(a,b);
-    while(nextTarget <= traveled + segLen){
-      const t=(nextTarget - traveled)/segLen;
-      out.push(L.latLng(a.lat + (b.lat-a.lat)*t, a.lng + (b.lng-a.lng)*t));
-      nextTarget += spacingMeters;
-    }
-    traveled += segLen;
-  }
-  return out;
-}
-
-// ---------------- PIXEL-Segment-Cache ----------------
-//let roadPixelSegments = [];
-function rebuildRoadPixelSegments(){
-  roadPixelSegments = [];
-  for(let ri=0; ri<roads.length; ri++){
-    const latlngs = flattenLatLngs(roads[ri].getLatLngs());
-    const segs = [];
-    for(let i=0;i<latlngs.length-1;i++){
-      const a = map.latLngToLayerPoint(latlngs[i]);
-      const b = map.latLngToLayerPoint(latlngs[i+1]);
-      segs.push({a,b});
-    }
-    roadPixelSegments.push(segs);
-  }
-}
-map.on('zoomend movestart moveend resize', ()=>{ rebuildRoadPixelSegments(); });
-
-// ---------------- GEOJSON LOADER ----------------
-geoFileEl.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = (e)=>{ try{ const j = JSON.parse(e.target.result); if(!j || j.type !== 'FeatureCollection'){ alert('Bitte eine FeatureCollection (GeoJSON) auswählen.'); return; } clearRoads(); clearStars(); score = 0; updateScore(); finished = false; finishOverlay.style.display = 'none'; let added = 0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g = fe.geometry; if(g.type === 'LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type === 'MultiLineString'){ g.coordinates.forEach(line => addRoadFromCoords(line)); added++; } }); if(added === 0){ alert('Keine LineString-Features gefunden.'); return; } placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed = 0; headingDeg = 0; displayedAngle = 0; if(rotWrapper) rotWrapper.style.transform = 'rotate(0deg)'; } } loaderEl.style.display = 'none'; alert('GeoJSON geladen: ' + added + ' Feature(s).'); }catch(err){ alert('Fehler beim Einlesen: ' + (err && err.message ? err.message : err)); } }; reader.readAsText(f); });
+/* ---------- GEOJSON LOADER ---------- */
+geoFileEl.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = (e)=>{ try{ const j = JSON.parse(e.target.result); if(!j || j.type !== 'FeatureCollection'){ alert('Bitte eine FeatureCollection (GeoJSON) auswählen.'); return; } clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0){ alert('Keine LineString-Features gefunden.'); return; } placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=0; displayedAngle=0; } } loaderEl.style.display='none'; alert('GeoJSON geladen: ' + added + ' Feature(s).'); }catch(err){ alert('Fehler beim Einlesen: ' + (err && err.message ? err.message : err)); } }; reader.readAsText(f); });
 
 centerBtn.addEventListener('click', ()=>{ if(roads.length>0) map.fitBounds(L.featureGroup(roads).getBounds().pad(0.2)); else map.setView(STARTPOS, MAP_ZOOM); });
-resetBtn.addEventListener('click', ()=>{ clearRoads(); clearStars(); score=0; updateScore(); speed=0; headingDeg=0; displayedAngle=0; if(rotWrapper) rotWrapper.style.transform='rotate(0deg)'; map.setView(STARTPOS, MAP_ZOOM); loaderEl.style.display = ''; finished=false; finishOverlay.style.display='none'; });
+resetBtn.addEventListener('click', ()=>{ clearRoads(); clearStars(); score=0; updateScore(); speed=0; headingDeg=0; displayedAngle=0; if(rotWrapper) rotWrapper.style.transform='rotate(0deg)'; map.setView(STARTPOS, MAP_ZOOM); loaderEl.style.display=''; finished=false; finishOverlay.style.display='none'; });
 
-// ---------------- INPUT ----------------
+/* ---------- INPUT ---------- */
 const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
-//document.addEventListener('keydown', (e)=>{ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){ e.preventDefault(); e.stopPropagation(); keys[e.key]=true; } }, { passive:false });
 
+/* ---------- Music menu coordination variables ---------- */
+const menuPanel = document.getElementById('menuPanel');
+let menuOpen = false;
 
+/* We need to ensure space toggles the menu and when menu is open the
+   game input (arrow keys) is ignored. So we integrate space handling here. */
 document.addEventListener('keydown', (e)=>{
-if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
-e.preventDefault();
-e.stopPropagation();
-keys[e.key] = true;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+
+  // Space toggles menu
+  if(e.code === 'Space'){
+    e.preventDefault();
+    toggleMenu();
+    return;
+  }
+
+  // If menu open, ignore movement/states except gear keys
+  if(menuOpen) {
+    // allow gear changes
+    /*
+	if (e.key >= '1' && e.key <= '5') {
+      currentGear = parseInt(e.key, 10);
+      MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed;
+      ACCEL = SPEED_GEARS[currentGear].accel;
+      console.log('Gang gewechselt:', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL);
+    }
+	*/
+	
+	if (e.key >= '1' && e.key <= '9') {
+  currentGear = Math.min(9, Math.max(1, parseInt(e.key, 10)));
+  MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed;
+  ACCEL = SPEED_GEARS[currentGear].accel;
+  console.log('Gang gewechselt:', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL);
+  updateControlsHelpGear();
 }
-// NEU: Gangschaltung über 1–5
-else if (e.key >= '1' && e.key <= '5') {
-currentGear = parseInt(e.key, 10);
-MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed;
-ACCEL = SPEED_GEARS[currentGear].accel;
-console.log('Gang gewechselt:', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL);
+    // otherwise suppress movement keys
+    return;
+  }
+
+  // normal game controls
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+    e.preventDefault();
+    e.stopPropagation();
+    keys[e.key] = true;
+  }
+  else if (e.key >= '1' && e.key <= '9') {
+  currentGear = Math.min(9, Math.max(1, parseInt(e.key, 10)));
+  MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed;
+  ACCEL = SPEED_GEARS[currentGear].accel;
+   updateControlsHelpGear();
+  console.log('Gang gewechselt:', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL);
 }
 }, { passive:false });
 
-
 document.addEventListener('keyup', (e)=>{ if(e.key in keys){ keys[e.key]=false; e.preventDefault(); e.stopPropagation(); } }, { passive:false });
-function makeButtonHold(id, keyName){ const el = document.getElementById(id); if(!el) return; const start = (ev)=>{ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} keys[keyName]=true; }; const stop = (ev)=>{ keys[keyName]=false; }; el.addEventListener('touchstart', start, { passive:false }); el.addEventListener('touchend', stop); el.addEventListener('touchcancel', stop); el.addEventListener('mousedown', (e)=>{ e.preventDefault(); start(e); }); el.addEventListener('mouseup', stop); el.addEventListener('mouseleave', stop); }
-makeButtonHold('tLeft','ArrowLeft'); makeButtonHold('tRight','ArrowRight'); makeButtonHold('tUp','ArrowUp'); makeButtonHold('tDown','ArrowDown');
 
-
-
-document.addEventListener('keydown', (e) => {
-if (e.key >= '1' && e.key <= '5') {
-currentGear = parseInt(e.key, 10);
-MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed;
-ACCEL = SPEED_GEARS[currentGear].accel;
-console.log('Gang gewechselt: ', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL);
-}
-});
-
-// ---------------- SOUNDS ----------------
-// pickup sound exactly as provided
-function playPickupSound(){ try{ zzfx(...[,,104,.04,.02,.07,,.8,,138,,,,,,,,.85,.02]); }catch(e){} }
-
-// looped driving sound while moving (uses your zzfx "Music 53" params)
-let driveLoopId = null;
-const DRIVE_LOOP_INTERVAL = 280; // ms between repeats; tweakable
-//const DRIVE_LOOP_PARAMS = [2.5,0,65.40639,.13,.23,.42,1,2.4,,,,,,.1,,.1,.04,.82,.17,,303];
-//const DRIVE_LOOP_PARAMS = [0.1,.01,120,,1,0,3,,-3,1,,,.03,,,,,.61,,.36];
-//const DRIVE_LOOP_PARAMS = [2,,16,.17,.09,.07,5,.5,,,,,,,,,,.85,.02,,1];
-//const DRIVE_LOOP_PARAMS = [0.3,0,90,.05,.2,.2,3,1,0,0,0,0,0,0,0,0,0.9,0,0];
-
-//const DRIVE_LOOP_PARAMS = [.4,0,253,.03,.36,.001,5,.7921240274692839,-77,,4,.25,,,74,.3,,.98,.44,,-1278];
-//const DRIVE_LOOP_PARAMS = [.1,0,253,,1,0,1,.7921240274692839,-77,,4,.25,,,74,.3,,.98,,,-1278];
-const DRIVE_LOOP_PARAMS = [.6,,466,,.05,.06,4,.9,12,,3,,.04,.6,139,,,.63,.06,.39,-1031];
-
-
-
-function startDriveLoop(){
-  if(driveLoopId) return;
-  // play immediately and then start repeating
-  try{ zzfx(...DRIVE_LOOP_PARAMS); }catch(e){}
-  driveLoopId = setInterval(()=>{ try{ zzfx(...DRIVE_LOOP_PARAMS); }catch(e){} }, DRIVE_LOOP_INTERVAL);
-}
-function stopDriveLoop(){ if(driveLoopId){ clearInterval(driveLoopId); driveLoopId = null; } }
-
-// small one-off sounds
-function playBounceSound(){ try{ zzfx(0.2,0,200,0.01,0.08,0.14,1,0,0.2,0,0.14); }catch(e){} }
-function playFinishSound(){ try{ zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2); }catch(e){} }
-
-// ---------------- PIXEL CACHE & helpers ----------------
-let roadPixelSegments = [];
-function rebuildRoadPixelSegments(){
-  roadPixelSegments = [];
-  for(let ri=0; ri<roads.length; ri++){
-    const latlngs = flattenLatLngs(roads[ri].getLatLngs());
-    const segs = [];
-    for(let i=0;i<latlngs.length-1;i++){
-      const a = map.latLngToLayerPoint(latlngs[i]);
-      const b = map.latLngToLayerPoint(latlngs[i+1]);
-      segs.push({a,b});
-    }
-    roadPixelSegments.push(segs);
+function toggleMenu(){
+  menuOpen = !menuOpen;
+  menuPanel.classList.toggle('open', menuOpen);
+  menuPanel.setAttribute('aria-hidden', String(!menuOpen));
+  if(menuOpen){
+    // blur active element to avoid accidental key repeats
+    try{ (document.activeElement||document.body).blur(); }catch(e){}
+    // show hint in menu
+    //document.getElementById('miniStatus').textContent = 'Menü geöffnet — bitte in den Player klicken und Play drücken.';
+  } else {
+    //document.getElementById('miniStatus').textContent = 'Warte auf Interaktion…';
   }
 }
 
-// ---------------- MAIN LOOP ----------------
-let lastTime = null;
-function animate(t){
-  if(!lastTime) lastTime = t;
-  const dt = Math.min(0.05, (t-lastTime)/1000);
-  lastTime = t;
-
-  if(keys.ArrowLeft) headingDeg = (headingDeg - ROTATION_SPEED * dt + 360) % 360;
-  if(keys.ArrowRight) headingDeg = (headingDeg + ROTATION_SPEED * dt) % 360;
-
-  if(keys.ArrowUp) speed += ACCEL * dt;
-  else if(keys.ArrowDown) speed -= ACCEL * dt;
-  else { if(speed > 0) speed = Math.max(0, speed - FRICTION * dt); if(speed < 0) speed = Math.min(0, speed + FRICTION * dt); }
-
-  speed = Math.min(MAX_FORWARD_SPEED, speed); speed = Math.max(MAX_REVERSE_SPEED, speed);
-
-  // manage drive loop: start when speed sufficiently positive, stop when nearly zero
-  //if(Math.abs(speed) > 0.6) startDriveLoop(); else stopDriveLoop();
-  
-  if(Math.abs(speed) > 0.01){
-    if(!driveSound.playing()) driveSound.play();
-}else{
-    driveSound.stop();
+function updateControlsHelpGear(){
+  const g = document.getElementById('controlsHelpGear');
+  if (g) g.textContent = currentGear;
 }
-  
+
+updateControlsHelpGear();
+
+/* ---------- SOUNDS (Howler optional) ---------- */
+let driveSound = null;
+try{ driveSound = new Howl({ src: ['assets/mp3/369718__setuniman__in-the-seventies-1o34.mp3'], loop:true, volume:0.3 }); }catch(e){ console.warn('Howler not available or file missing'); }
+function startDriving(){ /*if(driveSound && !driveSound.playing()) driveSound.play(); */}
+function stopDriving(){ /*if(driveSound) driveSound.stop();*/ }
+function playPickupSound(){ try{ zzfx(...[,,104,.04,.02,.07,,.8,,138,,,,,,,,.85,.02]); }catch(e){} }
+function playBounceSound(){ try{ zzfx(0.2,0,200,0.01,0.08,0.14,1,0,0.2,0,0.14); }catch(e){} }
+function playFinishSound(){ try{ zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2); }catch(e){} }
+
+
+/* ---------- CAR ---------- */
+let carPos = L.latLng(STARTPOS[0], STARTPOS[1]); let headingDeg = 0; let displayedAngle = 0; let speed = 0;
+
+/* ---------- MAIN LOOP (optimized) ---------- */
+let lastTime = null; let pickupAccumulator = 0; const PICKUP_CHECK_INTERVAL = 60;
+function animate(t){ if(!lastTime) lastTime = t; const dt = Math.min(0.05, (t-lastTime)/1000); lastTime = t;
+
+  // If menuOpen we still animate but we ignore movement keys (already handled in keydown)
+  if(keys.ArrowLeft) headingDeg = (headingDeg - 60 * dt + 360) % 360; if(keys.ArrowRight) headingDeg = (headingDeg + 60 * dt) % 360;
+  if(keys.ArrowUp) speed += ACCEL * dt; else if(keys.ArrowDown) speed -= ACCEL * dt; else { if(speed>0) speed = Math.max(0, speed - 2.0 * dt); if(speed<0) speed = Math.min(0, speed + 2.0 * dt); }
+  speed = Math.min(MAX_FORWARD_SPEED, speed); speed = Math.max(-MAX_FORWARD_SPEED*0.45, speed);
+
+  if(Math.abs(speed) > 0.05) startDriving(); else stopDriving();
 
   if(Math.abs(speed) > 0.0001){
     const moveMeters = Math.abs(speed) * dt;
     const bearing = speed > 0 ? headingDeg : (headingDeg + 180) % 360;
     const candidate = destinationPoint(carPos.lat, carPos.lng, moveMeters, bearing);
 
-    const candidatePoint = map.latLngToLayerPoint(candidate);
     let inOn=false, inNear=false, inBorder=false;
-    if(roadPixelSegments.length > 0){
-      outer: for(let ri=0; ri<roadPixelSegments.length; ri++){
-        const segs = roadPixelSegments[ri];
-        for(let si=0; si<segs.length; si++){
-          const d = L.LineUtil.pointToSegmentDistance(candidatePoint, segs[si].a, segs[si].b);
-          if(d <= Z_ON){ inOn = true; break outer; }
-          if(d <= Z_NEAR) inNear = true;
-          if(d <= Z_BORDER) inBorder = true;
-        }
-      }
-    } else {
-      inOn = onRoad(candidate, Z_ON);
-      inNear = inOn || onRoad(candidate, Z_NEAR);
-      inBorder = inNear || onRoad(candidate, Z_BORDER);
+    if(roadPixelSegments.length>0){ outer: for(let ri=0; ri<roadPixelSegments.length; ri++){ const segs = roadPixelSegments[ri]; for(let si=0; si<segs.length; si++){ const d = L.LineUtil.pointToSegmentDistance(map.latLngToLayerPoint(candidate), segs[si].a, segs[si].b); if(d <= 12){ inOn=true; break outer; } if(d <= 20) inNear=true; if(d <= 28) inBorder=true; } } }
+
+    if(inOn){ carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.96; }
+    else if(inNear){ carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.82; }
+    else if(inBorder){ carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.72; }
+    else { const backDistance = Math.max(1.0, moveMeters * 1.0); const backPos = destinationPoint(carPos.lat, carPos.lng, backDistance, (bearing + 180) % 360); carPos = backPos; map.setView(carPos, map.getZoom(), { animate:false }); const bounceSpeed = Math.max(2.0, Math.abs(speed) * 0.52); speed = -bounceSpeed; carDiv.classList.add('bounce'); setTimeout(()=>carDiv.classList.remove('bounce'), 180); playBounceSound(); }
+
+    pickupAccumulator += dt*1000;
+    if(pickupAccumulator >= PICKUP_CHECK_INTERVAL){ pickupAccumulator = 0;
+      const centerPt = map.latLngToContainerPoint(carPos);
+      const pixelTarget = L.point(centerPt.x + PICKUP_PIXEL_DIST, centerPt.y);
+      const latlngTarget = map.containerPointToLatLng(pixelTarget);
+      const pickupRadiusMeters = map.distance(carPos, latlngTarget);
+      for(let i = stars.length -1; i>=0; i--){ const s = stars[i]; if(!s) continue; const d = map.distance(carPos, s.latlng); if(d <= pickupRadiusMeters){ if(map.hasLayer(s.marker)) map.removeLayer(s.marker); stars.splice(i,1); score += 10; updateScore(); playPickupSound(); } }
     }
 
-    if(inOn){
-      carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.96;
-    } else if(inNear){
-      carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.82;
-    } else if(inBorder){
-      carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.72;
-    } else {
-      // offroad bounce: stronger
-      const backDistance = Math.max(1.0, moveMeters * 1.0);
-      const backPos = destinationPoint(carPos.lat, carPos.lng, backDistance, (bearing + 180) % 360);
-      carPos = backPos; map.setView(carPos, map.getZoom(), { animate:false });
-
-      const bounceSpeed = Math.max(MIN_BOUNCE_SPEED, Math.abs(speed) * BOUNCE_FACTOR);
-      speed = -bounceSpeed;
-
-      carDiv.classList.add('bounce'); setTimeout(()=>carDiv.classList.remove('bounce'), 180);
-      playBounceSound();
-    }
-
-    // pickups: pCar once
-    const pCar = map.latLngToLayerPoint(carPos);
-    for(let i = stars.length - 1; i >= 0; i--){
-      const s = stars[i]; if(!s) continue;
-      const pStar = map.latLngToLayerPoint(s.getLatLng());
-      if(pCar.distanceTo(pStar) < PICKUP_PIXEL_DIST){
-        map.removeLayer(s); stars.splice(i,1); score += 10; updateScore(); playPickupSound();
-      }
-    }
-
-    // finish
-    if(!finished && roads.length>0){
-      const lastRoadLL = flattenLatLngs(roads[0].getLatLngs());
-      const lastPoint = lastRoadLL[lastRoadLL.length-1];
-      if(lastPoint && map.distance(carPos, lastPoint) <= FINISH_DISTANCE_METERS){ finished = true; finishOverlay.style.display = 'block'; playFinishSound(); }
-    }
+    if(!finished && roads.length>0){ const lastRoadLL = flattenLatLngs(roads[0].getLatLngs()); const lastPoint = lastRoadLL[lastRoadLL.length-1]; if(lastPoint && map.distance(carPos, lastPoint) <= FINISH_DISTANCE_METERS){ finished = true; finishOverlay.style.display = 'block'; playFinishSound(); } }
   }
 
-  // rotation smoothing
-  if(rotWrapper){
-    const targetAngle = -headingDeg;
-    const diff = shortestAngleDiff(targetAngle, displayedAngle);
-    const step = diff * (1 - Math.exp(-8 * dt));
-    displayedAngle += step;
-    if(Math.abs(shortestAngleDiff(targetAngle, displayedAngle)) < 0.02) displayedAngle = ((targetAngle%360)+360)%360;
-    rotWrapper.style.transform = `rotate(${displayedAngle}deg)`;
-  }
+  if(rotWrapper){ const targetAngle = -headingDeg; const diff = shortestAngleDiff(targetAngle, displayedAngle); const step = diff * (1 - Math.exp(-8 * dt)); displayedAngle += step; if(Math.abs(shortestAngleDiff(targetAngle, displayedAngle)) < 0.02) displayedAngle = ((targetAngle%360)+360)%360; rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; }
 
-  // car lean
-  let angularVelocity = 0; if(keys.ArrowLeft) angularVelocity = -ROTATION_SPEED; if(keys.ArrowRight) angularVelocity = ROTATION_SPEED;
-  const tiltMax = 12;
-  const lean = (angularVelocity / ROTATION_SPEED) * (Math.min(Math.abs(speed)/MAX_FORWARD_SPEED, 1)) * tiltMax;
-  carDiv.style.transform = `translate(-50%,-50%) rotate(${lean}deg)`;
+  const tiltMax = 12; let angularVelocity = 0; if(keys.ArrowLeft) angularVelocity = -60; if(keys.ArrowRight) angularVelocity = 60; const lean = (angularVelocity / 60) * (Math.min(Math.abs(speed)/MAX_FORWARD_SPEED,1)) * tiltMax; carDiv.style.transform = `translate(-50%,-50%) rotate(${lean}deg)`;
 
   requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
 
-// fallback onRoad that uses dynamic per-segment latLng->layer conversions if needed
-function onRoad(latlng, pixelTolerance = 12){
-  if(roads.length === 0) return false;
-  const p = map.latLngToLayerPoint(latlng);
-  for(let ri=0; ri<roads.length; ri++){
-    let latlngs = roads[ri].getLatLngs();
-    if(Array.isArray(latlngs[0]) && latlngs[0] && typeof latlngs[0].lat === 'undefined') latlngs = latlngs.flat();
-    for(let i=0;i<latlngs.length-1;i++){
-      const a = map.latLngToLayerPoint(latlngs[i]); const b = map.latLngToLayerPoint(latlngs[i+1]);
-      if(L.LineUtil.pointToSegmentDistance(p,a,b) <= pixelTolerance) return true;
+/* ---------- fallback onRoad ---------- */
+function onRoad(latlng, pixelTolerance = 12){ if(roads.length === 0) return false; const p = map.latLngToLayerPoint(latlng); for(let ri=0; ri<roads.length; ri++){ let latlngs = roads[ri].getLatLngs(); if(Array.isArray(latlngs[0]) && latlngs[0] && typeof latlngs[0].lat === 'undefined') latlngs = latlngs.flat(); for(let i=0;i<latlngs.length-1;i++){ const a = map.latLngToLayerPoint(latlngs[i]); const b = map.latLngToLayerPoint(latlngs[i+1]); if(L.LineUtil.pointToSegmentDistance(p,a,b) <= pixelTolerance) return true; } } return false; }
+
+/* ---------- rotate wrapper ---------- */
+let rotWrapper = null;
+map.whenReady(()=>{ const container = map.getContainer(); const pane = container.querySelector('.leaflet-map-pane'); if(!pane) return; const wrapper = document.createElement('div'); wrapper.className = 'rotate-wrapper'; wrapper.style.position = 'absolute'; wrapper.style.inset = '0'; wrapper.style.willChange = 'transform'; container.insertBefore(wrapper, pane); wrapper.appendChild(pane); rotWrapper = wrapper; rebuildRoadPixelSegments(); alert('ℹ️ Driving: Arrowkeys. Change Speed: press keys 1-9'); });
+
+/* ---------- auto-load (optional) ---------- */
+(function autoLoadGeoJSON(){ const geojsonDataUrl = 'assets/json/strecken.json'; fetch(geojsonDataUrl).then(res => { if(!res.ok) throw new Error('not found'); return res.json(); }).then(j => { if(!j || j.type !== 'FeatureCollection') return; clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0) return; placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=180; displayedAngle=-headingDeg; if(rotWrapper) rotWrapper.style.transform=`rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)'); }).catch(()=>{}); })();
+
+/* ============================
+   Musik-Menu (kapsel, keine globalen Konflikte)
+   - Space toggled (siehe oben).
+   - Resume / save position / M toggle works like in original musik.js,
+     aber lokal scoped.
+   ============================ */
+
+(function MusicMenuModule(){
+  const mixIframe = document.getElementById('mixcloudPlayer');
+  const iframeOverlay = document.getElementById('iframeOverlay');
+  const overlayText = document.getElementById('overlayText');
+  const miniStatus = document.getElementById('miniStatus');
+
+  let widget = null;
+  let widgetReady = false;
+  let userInteracted = false;
+  let isPlaying = false;
+  let pendingSeekSeconds = null;
+  let _saveInterval = null;
+
+  const STORAGE_KEY = 'mixcloud_pos_' + encodeURIComponent(mixIframe.src);
+
+  // init widget safely
+  try{
+    widget = Mixcloud.PlayerWidget(mixIframe);
+    widget.ready.then(()=>{
+      widgetReady = true;
+      try{
+        widget.events.play.on(()=>{ isPlaying = true; confirmPlay('widget.events.play'); console.log("playing.."); });
+        widget.events.pause.on(()=>{ isPlaying = false; });
+		widget.events.seek.on(() => {
+		console.log("seeking...");
+      // small delay so widget finished internal updates, then reclaim focus
+      setTimeout(() => returnFocusToMap(), 60);
+    });
+        widget.events.ended.on(()=>{ localStorage.removeItem(STORAGE_KEY); //miniStatus.textContent = 'Track beendet — gespeicherte Position gelöscht';
+		});
+      }catch(e){ console.warn('events unavailable', e); }
+
+      // load saved pos (pending)
+      const savedRaw = localStorage.getItem(STORAGE_KEY);
+      const saved = savedRaw ? parseFloat(savedRaw) : 0;
+      if (saved && !Number.isNaN(saved) && saved > 0){ pendingSeekSeconds = saved; console.log('pending saved pos', pendingSeekSeconds); }
+
+      // start periodic saving
+      startSavingPositionEverySecond();
+    }).catch(err=>console.warn('widget.ready rejected', err));
+  }catch(e){ console.warn('widget init failed', e); }
+
+  // Detect clicks in iframe area: capture-phase pointerdown/touchstart global, check coords against iframe rect
+  function onGlobalPointerDown(e){
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+    const rect = mixIframe.getBoundingClientRect();
+    const x = (typeof e.clientX === 'number') ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX);
+    const y = (typeof e.clientY === 'number') ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
+    if (typeof x !== 'number' || typeof y !== 'number') return;
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom){
+      startPlayDetection('pointerdown-in-iframe');
     }
   }
-  return false;
+  document.addEventListener('pointerdown', onGlobalPointerDown, true);
+  document.addEventListener('touchstart', onGlobalPointerDown, true);
+
+  try{ mixIframe.addEventListener('focus', ()=>{ startPlayDetection('iframe-focus'); }); }catch(e){}
+  window.addEventListener('blur', ()=>{ startPlayDetection('window-blur'); });
+
+  const PLAY_POLL_INTERVAL = 350; const PLAY_DETECT_TIMEOUT = 15000;
+  let _playDetectPoll = null; let _playDetectTimer = null; let _widgetPlayHandler = null;
+
+  function startPlayDetection(source){
+    if (_playDetectPoll) return;
+    //miniStatus.textContent = 'Erkenne Play (trigger: ' + source + ')';
+    try{ if (widget && widget.events && widget.events.play && !_widgetPlayHandler){ _widgetPlayHandler = ()=> confirmPlay('widget.events.play'); widget.events.play.on(_widgetPlayHandler); } }catch(e){}
+    const start = Date.now();
+    _playDetectPoll = setInterval(async ()=>{
+      if (!widgetReady) return;
+      try{
+        const pos = await widget.getPosition();
+        if (typeof pos === 'number' && isFinite(pos) && pos > 0.5){ confirmPlay('getPosition>0.5s (poll)'); }
+      }catch(err){}
+      if (Date.now() - start > PLAY_DETECT_TIMEOUT){ stopPlayDetection(); //miniStatus.textContent = 'Kein Play erkannt (timeout)';
+	  }
+    }, PLAY_POLL_INTERVAL);
+    _playDetectTimer = setTimeout(()=>stopPlayDetection(), PLAY_DETECT_TIMEOUT);
+	
+  }
+  function stopPlayDetection(){ if (_playDetectPoll){ clearInterval(_playDetectPoll); _playDetectPoll = null; } if (_playDetectTimer){ clearTimeout(_playDetectTimer); _playDetectTimer = null; } }
+
+  async function confirmPlay(detectedVia){
+  
+  
+  if(menuOpen){
+	//console.log("play confirmed.");
+	setTimeout(() => returnFocusToMap(), 60);
+  }
+  
+  
+    if (userInteracted) return;
+    userInteracted = true; isPlaying = true;
+    overlayText.textContent = 'Play gedrückt. Mit der Taste M kannst du nun die Musik an und aus machen.';
+    //miniStatus.textContent = 'Play gedrückt (detected via: ' + detectedVia + ')';
+	returnFocusToMap();
+	
+	// minimaler, robuster Ablauf (nur als Snippet)
+// neu: robuster helper-Aufruf
+returnFocusToMap();
+// optional: Menü schließen, wenn du das möchtest
+menuPanel.classList.remove('open'); menuOpen = false;
+	
+    await tryPendingSeekAfterUserInteracted();
+    stopPlayDetection();
+  }
+
+  async function attemptSeek(seconds) {
+  console.log("trying focus...");
+  if (!widgetReady || !widget || typeof widget.seek !== 'function') return false;
+  try {
+    const res = await widget.seek(seconds);
+    // Mixcloud gibt manchmal `false` bei Fehlern zurück — alles andere behandeln wir als Erfolg
+    if (res === false) return false;
+
+    // Seek erfolgreich: gespeicherte Position zurücksetzen
+    pendingSeekSeconds = null;
+
+    // Fokus zurück zur Map holen (robustes Helper mit Retries)
+    try { returnFocusToMap(); } catch (e) { /* ignore */ }
+
+    return true;
+  } catch (err) {
+    console.warn('widget.seek failed', err);
+    return false;
+  }
 }
 
-// rebuild pixel segments initially if any roads exist
-map.whenReady(()=>{ rebuildRoadPixelSegments(); 
+  async function tryPendingSeekAfterUserInteracted(){ if (!widgetReady) return; if (!pendingSeekSeconds) return; const ok = await attemptSeek(pendingSeekSeconds); if (ok) return; const start = Date.now(); const timeout = 10000; const poll = setInterval(async ()=>{ if (!widgetReady) return; try{ const pos = await widget.getPosition(); if (typeof pos === 'number' && isFinite(pos) && pos > 0.1){ const ok2 = await attemptSeek(pendingSeekSeconds); if (ok2){ clearInterval(poll); } } }catch(e){} if (Date.now()-start > timeout){ clearInterval(poll); } }, 600); }
 
-alert("ℹ️ Driving: Arrowkeys. Change Speed: press keys 1-5")
+  function startSavingPositionEverySecond(){ if (_saveInterval) return; _saveInterval = setInterval(async ()=>{ if (!widgetReady) return; try{ const pos = await widget.getPosition(); if (typeof pos === 'number' && isFinite(pos)){ localStorage.setItem(STORAGE_KEY, String(Math.floor(pos))); } }catch(e){} }, 1000); }
+  function stopSavingPosition(){ if (_saveInterval){ clearInterval(_saveInterval); _saveInterval = null; } }
 
-});
+  async function togglePlayPauseMusic(){ if (!widgetReady) return; if (!userInteracted){ alert('Bitte zuerst Play im Player drücken.'); return; } try{ if (typeof widget.togglePlay === 'function'){ await widget.togglePlay(); return; } if (isPlaying) await widget.pause(); else await widget.play(); }catch(err){} }
+
+  // expose M toggle and menu-key globally by listening for keydown on document
+  document.addEventListener('keydown', (e)=>{
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (e.key && e.key.toLowerCase() === 'm'){
+      e.preventDefault();
+      togglePlayPauseMusic();
+    }
+  }, {passive:false});
+
+  // load pending saved pos from storage immediately (but don't seek until user interacts)
+  try{ const savedRaw = localStorage.getItem(STORAGE_KEY); const saved = savedRaw ? parseFloat(savedRaw) : 0; if (saved && !Number.isNaN(saved) && saved > 0){ pendingSeekSeconds = saved; console.log('pending saved pos', pendingSeekSeconds); } }catch(e){}
+  
+  
+  // A: Helper — INSIDE MusicMenuModule so mixIframe and map are in scope
+// state var (MusicMenuModule scope)
+let _restorePointerHandler = null;
+
+function enableIframePointerEvents() {
+  try { mixIframe.style.pointerEvents = ''; } catch(e) {}
+  if (_restorePointerHandler) {
+    document.removeEventListener('pointerdown', _restorePointerHandler, true);
+    _restorePointerHandler = null;
+  }
+}
+
+// robustes returnFocusToMap: kurz deaktivieren, dann re-enable on next pointerdown OR timeout
+function returnFocusToMap(attempts = 8, interval = 80) {
+  try { mixIframe.blur(); } catch(e){}
+  const cont = map.getContainer();
+  if (typeof cont.tabIndex === 'undefined' || cont.tabIndex < 0) cont.tabIndex = 0;
+  let tries = 0;
+  const id = setInterval(()=> {
+    try { cont.focus(); } catch(e) {}
+    tries++; if (tries >= attempts) clearInterval(id);
+  }, interval);
+}
+
+
+  // cleanup on unload
+  window.addEventListener('beforeunload', ()=>{ stopSavingPosition(); });
+  
+  
+  
+})(); // end MusicMenuModule
 
 
 
-// remove focus on click
-map.on('click', ()=>{ try{ (document.activeElement||document.body).blur(); }catch(e){} });
 
 
-
-// ---------------- Auto-load (optional) ----------------
-(function autoLoadGeoJSON(){
-
-const geojsonDataUrl = 'assets/json/strecken.json';
-
-
-  fetch(geojsonDataUrl).then(res => { if(!res.ok) throw new Error('not found'); return res.json(); }).then(j => {
-    if(!j || j.type !== 'FeatureCollection') return;
-    clearRoads(); clearStars(); score = 0; updateScore(); finished = false; finishOverlay.style.display='none';
-    let added = 0;
-    j.features.forEach(fe => { if(!fe.geometry) return; const g = fe.geometry; if(g.type === 'LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type === 'MultiLineString'){ g.coordinates.forEach(line => addRoadFromCoords(line)); added++; } });
-    if(added===0) return;
-    placeStarsAll(STAR_SPACING);
-    rebuildRoadPixelSegments();
-    if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=180; displayedAngle=-headingDeg; if(rotWrapper) rotWrapper.style.transform=`rotate(${displayedAngle}deg)`; } }
-    loaderEl.style.display = 'none';
-    console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)');
-  }).catch(()=>{});
-})();
 </script>
 </body>
 </html>
