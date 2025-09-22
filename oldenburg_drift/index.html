@@ -3,7 +3,7 @@
 
 All rights reserved. At least at this very moment; I'm planning to realease this game into the Creative Commons, but please let me finish it first. It's still super buggy and I have a lot of Ideas. It's playable, yet; but don't expect too much. This is merely a draft, yet. Greetz, Wolfmond
 
-Current Version: 2025-09-22_23.06
+Current Version: 2025-09-22_23.37
 
 -->
 <html lang="de">
@@ -22,14 +22,62 @@ if (!confirm(message)) {
 </script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  :root{--bg:#fff;--panel:#fff;--muted:#666}
+  :root{
+	--bg:#222222;
+	--panel:#fff;
+	--muted:#666;
+
+ --car-top:    #7a00ff;    /* violet */
+  --car-bottom: #160032;    /* deep indigo */
+  --car-accent: #ff9ee7;    /* neon pink for triangle */
+  --car-rim:    rgba(255,255,255,0.12);
+  --car-glow:   rgba(122,0,255,0.18);
+  
+  
+  }
   html,body,#map { height:100%; margin:0; padding:0; font-family: system-ui, Arial, sans-serif; }
   #map { position:relative; overflow:hidden; background:#e7eef8; }
 
   /* --- Car UI --- */
-  .car-center { position: absolute; z-index: 12000; left:50%; top:50%; transform: translate(-50%, -50%); width:36px; height:36px; border-radius:50%; background:linear-gradient(180deg,#4aa3ff,#2b6fd6); box-shadow:0 6px 14px rgba(0,0,0,0.35); border:3px solid white; pointer-events:none; display:flex; align-items:center; justify-content:center; transition: box-shadow 120ms linear, transform 120ms linear; }
-  .car-center.bounce { box-shadow: 0 4px 12px rgba(0,0,0,0.55); transform: translate(-50%,-48%); }
-  .car-arrow { width:0;height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:14px solid rgba(255,255,255,0.95); }
+  /* circle / body */
+.car-center{
+  position: absolute;
+  z-index: 12000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+background: radial-gradient(circle at center, var(--car-top), var(--car-bottom));
+
+  border: 2px solid var(--car-rim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  /* multi-layered glow + inner subtle sheen */
+  box-shadow:box-shadow:
+  0 0 18px rgba(0,0,0,0.6),
+  0 0 26px var(--car-glow),
+  0 0 6px rgba(255,158,231,0.06) inset;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 220ms ease;
+}
+
+/* slight bounce look */
+.car-center.bounce{
+  transform: translate(-50%,-48%) scale(1.02);
+  box-shadow:
+    0 6px 14px rgba(0,0,0,0.65),
+    0 10px 30px var(--car-glow);
+}
+
+/* make SVG polygon crisp and enable color transitions */
+.car-center svg { width: 22px; height: 22px; display:block; }
+.car-center polygon {
+  transition: fill 180ms ease, stroke 180ms ease, transform 160ms ease;
+  filter: drop-shadow(0 4px 10px rgba(122,0,255,0.18));
+}
 
   .score { position:absolute; top:12px; right:12px; z-index:14000; background: rgba(255,255,255,0.95); padding:8px 12px; border-radius:8px; font-weight:700; display:flex; gap:12px; align-items:center; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
   .loader { position:absolute; top:12px; left:12px; z-index:14000; background: rgba(255,255,255,0.96); padding:10px; border-radius:8px; font-size:13px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); min-width:220px; }
@@ -58,6 +106,26 @@ if (!confirm(message)) {
 }
 @media (max-width:480px){ .controls-help { font-size:0.85rem; } .controls-help kbd{ padding:3px 6px } }
 
+.menu-action{
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight:700;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+.menu-action[aria-pressed="true"]{
+  background: #222;
+  color:#fff;
+  border-color: rgba(0,0,0,0.12);
+}
+
+@media (max-width:480px){ .menu-action{ padding:6px 10px } }
+
+#fullscreenBtn {
+	border: 1px solid black;	
+}
 
   
   .leaflet-tile { filter: hue-rotate(var(--map-hue, 0deg)) saturate(0.3) contrast(1.03) brightness(1.02) invert(1); }
@@ -68,7 +136,18 @@ if (!confirm(message)) {
 <body>
   <div id="map"></div>
 
-  <div class="car-center" id="carDiv" title="Dein Wagen"><div class="car-arrow" id="carArrow"></div></div>
+<!--  <div class="car-center" id="carDiv" title="Dein Wagen"><div class="car-arrow" id="carArrow"></div></div>-->
+
+<div class="car-center" id="carDiv" title="Dein Wagen">
+  <!-- SVG triangle: fill = accent, stroke = soft outline -->
+  <svg width="22" height="22" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+    <polygon id="carTriangle" points="50,8 86,86 14,86"
+      fill="var(--car-accent,#ff9ee7)"
+      stroke="rgba(255,255,255,0.14)"
+      stroke-width="3"
+      stroke-linejoin="round"/>
+  </svg>
+</div>
 
   <div class="loader" id="loader">
     <div style="font-weight:700">Oldenburg Kart — Optimized</div>
@@ -90,10 +169,16 @@ if (!confirm(message)) {
       </div>
       <!--<div class="mini-status" id="miniStatus">Warte auf Interaktion…</div>-->
 	  
+	  <!-- Vollbild-Button: direkt unter den Hilfetext einfügen -->
+<div style="display:flex;justify-content:center;margin-top:8px">
+  <button id="fullscreenBtn" class="menu-action" type="button" aria-pressed="false">Vollbild</button>
+</div>
+
 	  <div class="controls-help" id="controlsHelp" aria-live="polite">
   <div class="help-title">Tastenbelegung</div>
   <div class="help-list">
     <div><kbd>1–9</kbd> Speed ändern — aktueller Gang: <strong id="controlsHelpGear">1</strong></div>
+    <div><kbd>F</kbd> Vollbild an/aus</div>
     <div><kbd>M</kbd> Musik an/aus</div>
     <div><kbd>Leertaste</kbd> Menü öffnen / schließen</div>
   </div>
@@ -171,7 +256,23 @@ function shortestAngleDiff(target,current){ target=((target%360)+360)%360; curre
 function clearRoads(){ roads.forEach(r=>{ if(map.hasLayer(r)) map.removeLayer(r); }); roads=[]; roadPixelSegments=[]; }
 function clearStars(){ stars.forEach(s=>{ if(s.marker && map.hasLayer(s.marker)) map.removeLayer(s.marker); }); stars=[]; }
 
-function addRoadFromCoords(coords, style){ const latlngs = coords.map(c => L.latLng(c[1], c[0])); const pl = L.polyline(latlngs, style || { color:'#2b6fd6', weight:4, opacity:0.95 }).addTo(map); roads.push(pl); return pl; }
+//function addRoadFromCoords(coords, style){ const latlngs = coords.map(c => L.latLng(c[1], c[0])); const pl = L.polyline(latlngs, style || { color:'#2b6fd6', weight:4, opacity:0.95 }).addTo(map); roads.push(pl); return pl; }
+
+function addRoadFromCoords(coords, style){
+  const latlngs = coords.map(c => L.latLng(c[1], c[0]));
+  const opts = style || {
+    color: 'rgba(255,0,255,0.6)', 
+    weight: 4,
+    opacity: 0.5,                    // stroke opacity (multiplikativ zu rgba alpha)
+    lineCap: 'round',
+    lineJoin: 'round',
+    renderer: canvasRenderer       // wenn du canvasRenderer verwendest
+  };
+  const pl = L.polyline(latlngs, opts).addTo(map);
+  roads.push(pl);
+  return pl;
+}
+
 
 function samplePointsAlongPath(latlngs, spacingMeters){ const out=[]; if(!latlngs||latlngs.length<2) return out; let traveled=0, nextTarget=spacingMeters; for(let i=0;i<latlngs.length-1;i++){ const a=latlngs[i], b=latlngs[i+1]; const segLen = map.distance(a,b); while(nextTarget <= traveled + segLen){ const t = (nextTarget - traveled)/segLen; out.push(L.latLng(a.lat + (b.lat-a.lat)*t, a.lng + (b.lng-a.lng)*t)); nextTarget += spacingMeters; } traveled += segLen; } return out; }
 
@@ -262,6 +363,78 @@ document.addEventListener('keydown', (e)=>{
    updateControlsHelpGear();
   console.log('Gang gewechselt:', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL);
 }
+
+else if (e.key && e.key.toLowerCase() === 'f') {
+  e.preventDefault();
+  // FULLSCREEN: helper + wiring
+function isFullscreenFor(el) {
+  // returns true if document is fullscreen on the requested element or any element
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+async function enterFullscreen(el) {
+  if (!el) return;
+  try {
+    if (el.requestFullscreen) await el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen) await el.mozRequestFullScreen();
+    else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+  } catch (e) { /* some browsers block without gesture; ignore */ }
+}
+
+async function exitFullscreen() {
+  try {
+    if (document.exitFullscreen) await document.exitFullscreen();
+    else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+    else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+    else if (document.msExitFullscreen) await document.msExitFullscreen();
+  } catch (e) {}
+}
+
+function toggleFullscreenTarget(targetEl = mapDiv) {
+  if (isFullscreenFor()) {
+    exitFullscreen();
+  } else {
+    enterFullscreen(targetEl);
+  }
+}
+
+// Button wiring (after DOM ready)
+const fsBtn = document.getElementById('fullscreenBtn');
+if (fsBtn) {
+  fsBtn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    toggleFullscreenTarget(document.documentElement);
+  });
+}
+
+// update button state on fullscreen changes and resize Leaflet map
+function onFullChange() {
+  const active = isFullscreenFor();
+  if (fsBtn) {
+    fsBtn.setAttribute('aria-pressed', String(active));
+    fsBtn.textContent = active ? 'Vollbild beenden' : 'Vollbild';
+  }
+  // allow Leaflet to reflow
+  try { setTimeout(()=> map.invalidateSize(), 120); } catch(e) {}
+}
+document.addEventListener('fullscreenchange', onFullChange);
+document.addEventListener('webkitfullscreenchange', onFullChange);
+document.addEventListener('mozfullscreenchange', onFullChange);
+document.addEventListener('MSFullscreenChange', onFullChange);
+
+}
+
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+  if (e.key && e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    toggleFullscreenTarget(document.documentElement);
+  }
+}, { passive:false });
+
+
 }, { passive:false });
 
 document.addEventListener('keyup', (e)=>{ if(e.key in keys){ keys[e.key]=false; e.preventDefault(); e.stopPropagation(); } }, { passive:false });
@@ -349,7 +522,7 @@ function onRoad(latlng, pixelTolerance = 12){ if(roads.length === 0) return fals
 
 /* ---------- rotate wrapper ---------- */
 let rotWrapper = null;
-map.whenReady(()=>{ const container = map.getContainer(); const pane = container.querySelector('.leaflet-map-pane'); if(!pane) return; const wrapper = document.createElement('div'); wrapper.className = 'rotate-wrapper'; wrapper.style.position = 'absolute'; wrapper.style.inset = '0'; wrapper.style.willChange = 'transform'; container.insertBefore(wrapper, pane); wrapper.appendChild(pane); rotWrapper = wrapper; rebuildRoadPixelSegments(); alert('ℹ️ Driving: Arrowkeys. Change Speed: press keys 1-9'); });
+map.whenReady(()=>{ const container = map.getContainer(); const pane = container.querySelector('.leaflet-map-pane'); if(!pane) return; const wrapper = document.createElement('div'); wrapper.className = 'rotate-wrapper'; wrapper.style.position = 'absolute'; wrapper.style.inset = '0'; wrapper.style.willChange = 'transform'; container.insertBefore(wrapper, pane); wrapper.appendChild(pane); rotWrapper = wrapper; rebuildRoadPixelSegments(); alert('ℹ Press SPACE for Menu.'); });
 
 /* ---------- auto-load (optional) ---------- */
 (function autoLoadGeoJSON(){ const geojsonDataUrl = 'assets/json/strecken.json'; fetch(geojsonDataUrl).then(res => { if(!res.ok) throw new Error('not found'); return res.json(); }).then(j => { if(!j || j.type !== 'FeatureCollection') return; clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0) return; placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=180; displayedAngle=-headingDeg; if(rotWrapper) rotWrapper.style.transform=`rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)'); }).catch(()=>{}); })();
@@ -541,6 +714,67 @@ function returnFocusToMap(attempts = 8, interval = 80) {
   
   
 })(); // end MusicMenuModule
+
+// FULLSCREEN: helper + wiring
+function isFullscreenFor(el) {
+  // returns true if document is fullscreen on the requested element or any element
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+async function enterFullscreen(el) {
+  if (!el) return;
+  try {
+    if (el.requestFullscreen) await el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen) await el.mozRequestFullScreen();
+    else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+  } catch (e) { /* some browsers block without gesture; ignore */ }
+}
+
+async function exitFullscreen() {
+  try {
+    if (document.exitFullscreen) await document.exitFullscreen();
+    else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+    else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+    else if (document.msExitFullscreen) await document.msExitFullscreen();
+  } catch (e) {}
+}
+
+function toggleFullscreenTarget(targetEl = mapDiv) {
+  if (isFullscreenFor()) {
+    exitFullscreen();
+  } else {
+    enterFullscreen(targetEl);
+  }
+}
+
+// Button wiring (after DOM ready)
+const fsBtn = document.getElementById('fullscreenBtn');
+if (fsBtn) {
+  fsBtn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    toggleFullscreenTarget(document.documentElement); // vollbild für die Karte
+  });
+}
+
+// update button state on fullscreen changes and resize Leaflet map
+function onFullChange() {
+  const active = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  if (fsBtn) {
+    fsBtn.setAttribute('aria-pressed', String(active));
+    fsBtn.textContent = active ? 'Vollbild beenden' : 'Vollbild';
+  }
+  // Leaflet neu rechnen
+  try { setTimeout(()=> map.invalidateSize(), 120); } catch(e){}
+}
+
+document.addEventListener('fullscreenchange', onFullChange);
+document.addEventListener('webkitfullscreenchange', onFullChange);
+document.addEventListener('mozfullscreenchange', onFullChange);
+document.addEventListener('MSFullscreenChange', onFullChange);
+
+
+
 
 
 
