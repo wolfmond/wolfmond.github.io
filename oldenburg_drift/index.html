@@ -3,7 +3,7 @@
 
 All rights reserved. At least at this very moment; I'm planning to realease this game into the Creative Commons, but please let me finish it first. It's still super buggy and I have a lot of Ideas. It's playable, yet; but don't expect too much. This is merely a draft, yet. Greetz, Wolfmond
 
-Current Version: 2025-09-22_23.46
+Current Version: 2025-09-23_2.56
 
 -->
 <html lang="de">
@@ -149,6 +149,25 @@ background: radial-gradient(circle at center, var(--car-top), var(--car-bottom))
   </svg>
 </div>
 
+<!-- Missions-UI: Pfeil + Meter (unten rechts) -->
+<div id="missionUI" aria-live="polite" style="position:fixed; right:12px; bottom:12px; z-index:16050; font-family:system-ui,Arial,sans-serif;">
+  <div id="missionBox" style="backdrop-filter:blur(6px); background: rgba(255,255,255,0.95); border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); min-width:160px; display:flex; gap:10px; align-items:center;">
+    <div id="missionArrow" style="width:42px; height:42px; display:flex; align-items:center; justify-content:center; transform: rotate(0deg); transform-origin:center; transition: transform 160ms linear;">
+
+      <!-- Simple SVG arrow -->
+      <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">
+        <g transform="translate(50,50)">
+          <path id="arrowPath" d="M0,-36 L14,18 L0,6 L-14,18 Z" fill="#7a00ff" stroke="rgba(0,0,0,0.06)" stroke-width="2"></path>
+        </g>
+      </svg>
+    </div>
+    <div style="display:flex;flex-direction:column;">
+      <div id="missionTitle" style="font-weight:800; font-size:14px; color:#111">— Lade Mission —</div>
+      <div id="missionDistance" style="font-size:13px; color:#444">— m —</div>
+    </div>
+  </div>
+</div>
+
   <div class="loader" id="loader">
     <div style="font-weight:700">Oldenburg Kart — Optimized</div>
     <div class="small">Lade ein GeoJSON (FeatureCollection mit LineString). Standard Sterne-Abstand: <strong>100 m</strong>.</div>
@@ -240,6 +259,8 @@ const resetBtn = document.getElementById('resetBtn');
 const scoreEl = document.getElementById('score');
 const hsEl = document.getElementById('hs');
 const finishOverlay = document.getElementById('finishOverlay');
+const missionBox = document.getElementById('missionBox');
+
 
 /* ---------- STATE ---------- */
 let roads = [], stars = [], roadPixelSegments = [], score = 0, finished = false;
@@ -326,6 +347,14 @@ document.addEventListener('keydown', (e)=>{
     toggleMenu();
     return;
   }
+  
+  // Wenn alle Missionen erledigt sind: Pfeiltasten unterdrücken
+if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && !missionManager.getState().active) {
+  e.preventDefault();
+  // keine weitere Aktion — Pfeiltasten sind deaktiviert
+  return;
+}
+
 
   // If menu open, ignore movement/states except gear keys
   if(menuOpen) {
@@ -473,6 +502,219 @@ function playFinishSound(){ try{ zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2)
 /* ---------- CAR ---------- */
 let carPos = L.latLng(STARTPOS[0], STARTPOS[1]); let headingDeg = 0; let displayedAngle = 0; let speed = 0;
 
+/* ----------------------
+   Mission Manager
+   ---------------------- */
+const missionManager = (function(){
+  const state = {
+    missions: [],
+    current: 0,
+    markers: [],
+    active: false,
+    ui: {
+      box: document.getElementById('missionBox'),
+      title: document.getElementById('missionTitle'),
+      distance: document.getElementById('missionDistance'),
+      arrow: document.getElementById('missionArrow')
+    }
+  };
+
+  // berechne Bearing (in Grad) von a -> b (lat/lng)
+  function bearingBetween(a, b){
+    const φ1 = toRad(a.lat), φ2 = toRad(b.lat);
+    const Δλ = toRad(b.lng - a.lng);
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+    return (toDeg(Math.atan2(y,x)) + 360) % 360;
+  }
+
+function loadFromUrl(url){
+  return fetch(url)
+    .then(r => {
+      if(!r.ok) throw new Error('Fetch failed: ' + r.status);
+      return r.json();
+    })
+    .then(j => {
+      // j.missions || j (array) || []
+      const raw = Array.isArray(j.missions) ? j.missions : (Array.isArray(j) ? j : (j.missions ? j.missions : []));
+      // normalize each mission into the shape the rest of your code expects:
+      // { id, title, description, lat, lng, start, target, radius, marker, onReach }
+      state.missions = raw.map(m => {
+        const nm = Object.assign({}, m); // shallow copy
+        // prefer explicit target.lat/lng if present (new format), else use flat lat/lng
+        if(m.target && (m.target.lat !== undefined || m.target.lng !== undefined)){
+          nm.lat = Number(m.target.lat);
+          nm.lng = Number(m.target.lng);
+          nm.target = { lat: Number(m.target.lat), lng: Number(m.target.lng) };
+        } else if (m.lat !== undefined && m.lng !== undefined){
+          nm.lat = Number(m.lat);
+          nm.lng = Number(m.lng);
+          nm.target = { lat: nm.lat, lng: nm.lng };
+        } else {
+          // no usable coordinate — leave nulls so we can detect later
+          nm.lat = nm.lng = null;
+          nm.target = null;
+        }
+
+        // also map optional start if present (useful for teleport-on-start)
+        if(m.start && (m.start.lat !== undefined || m.start.lng !== undefined)){
+          nm.start = { lat: Number(m.start.lat), lng: Number(m.start.lng) };
+        } else if(m.startLat !== undefined && m.startLng !== undefined){ // alternative key names
+          nm.start = { lat: Number(m.startLat), lng: Number(m.startLng) };
+        } else {
+          nm.start = nm.start || null;
+        }
+
+        nm.radius = Number(m.radius !== undefined ? m.radius : (m.target && m.target.radius) || 10);
+        nm.marker = (m.marker === undefined) ? true : Boolean(m.marker);
+        nm.onReach = m.onReach || {};
+        return nm;
+      });
+
+      // set index + active flag and place markers
+      state.current = 0;
+      state.active = state.missions.length > 0;
+
+      // clear old markers, then place new ones
+      clearMarkers();
+      if(state.active) placeMarkers();
+
+      // small debug log (remove if you don't want console noise)
+      console.log('Missions loaded (normalized):', state.missions);
+
+      return state.missions;
+    })
+    .catch(err => {
+      console.warn('loadFromUrl failed', err);
+      throw err;
+    });
+}
+
+
+function placeMarkers(){
+  clearMarkers();
+  state.missions.forEach((m,i)=>{
+    // Nur Marker für die aktuell aktive Mission zeichnen
+    if(i === state.current && m.marker){
+      const mm = L.circle([m.lat, m.lng], {
+        radius: Math.max(6, m.radius),
+        color: '#7a00ff',
+        weight: 2,
+        fill: false,
+        interactive: false
+      }).addTo(map);
+      state.markers.push(mm);
+    } else {
+      state.markers.push(null);
+    }
+  });
+}
+
+
+  function clearMarkers(){
+    state.markers.forEach(m=>{ if(m && map.hasLayer(m)) map.removeLayer(m); });
+    state.markers = [];
+  }
+
+  function currentMission(){
+    return state.missions[state.current] || null;
+  }
+
+function advanceMission(){
+  const cm = currentMission();
+  if(cm && cm.onReach && cm.onReach.score) {
+    score += Number(cm.onReach.score) || 0;
+    updateScore();
+  }
+  playPickupSound();
+
+  // Entferne Marker der aktuellen Mission (falls vorhanden)
+  if(state.markers[state.current] && map.hasLayer(state.markers[state.current])){
+    try { map.removeLayer(state.markers[state.current]); } catch(e){ /* ignore */ }
+    state.markers[state.current] = null;
+  }
+
+  // advance index
+  state.current++;
+
+  // kleine UI-Nachricht: "Mission abgeschlossen!" — bleibt kurz sichtbar
+  if(state.ui && state.ui.title){
+    state.ui.title.textContent = 'Mission abgeschlossen!';
+    setTimeout(()=> {
+      const next = currentMission();
+      state.ui.title.textContent = next ? next.title : 'Keine Missionen';
+    }, 900);
+  }
+
+  if(state.current >= state.missions.length){
+    // alle Missionen erledigt
+    state.active = false;
+    // globale finished-Variable (ist in deinem Script vorhanden)
+    finished = true;
+    finishOverlay.textContent = 'Alle Missionen erledigt 🎉 — Spiel geschafft!';
+    finishOverlay.style.display = 'block';
+	missionBox.style.display = 'none';
+    playFinishSound();
+
+    // sichere Aufräumaktionen
+    clearMarkers(); // alle Marker entfernen, sollte schon leer sein, ist aber sicher
+    // Deaktiviere Pfeiltasten (falls noch gedrückt)
+    keys.ArrowUp = keys.ArrowDown = keys.ArrowLeft = keys.ArrowRight = false;
+
+  } else {
+    // neue Mission: zeichne deren Marker
+    placeMarkers();
+    console.log('Nächste Mission:', currentMission() && currentMission().title);
+  }
+}
+
+
+  // Wird in jedem Frame/Loop aufgerufen
+  function update(dt){
+    if(!state.active) return;
+    const cm = currentMission();
+    if(!cm) return;
+    const target = L.latLng(cm.lat, cm.lng);
+    // Distance in meters (Luftlinie)
+    const dist = map ? map.distance(carPos, target) : (function(){ return 0; })();
+
+    // Bearing from car -> target
+    const b = bearingBetween(carPos, target);
+
+    // relative angle to player heading (target minus heading)
+    const rel = shortestAngleDiff(b, headingDeg); // nutzt deine helper shortestAngleDiff
+
+    // Update UI: rotate arrow, show meters
+    if(state.ui.arrow) {
+      // css rotate: +deg rotates clockwise. We want arrow pointing where target is relative to forward.
+      state.ui.arrow.style.transform = `rotate(${rel}deg)`;
+    }
+    if(state.ui.title) {
+      state.ui.title.textContent = cm.title || 'Mission';
+    }
+    if(state.ui.distance) {
+      const mtxt = dist >= 1000 ? (dist/1000).toFixed(2) + ' km' : Math.round(dist) + ' m';
+      state.ui.distance.textContent = `${mtxt} — ${cm.description || ''}`;
+    }
+
+    // Check reach
+    if(dist <= (cm.radius || 10)){
+      advanceMission();
+    }
+  }
+
+  // öffentlich API
+  return {
+    loadFromUrl,
+    update,
+    getState: ()=>state
+  };
+})(); // end missionManager
+
+
+
+
+
 /* ---------- MAIN LOOP (optimized) ---------- */
 let lastTime = null; let pickupAccumulator = 0; const PICKUP_CHECK_INTERVAL = 60;
 function animate(t){ if(!lastTime) lastTime = t; const dt = Math.min(0.05, (t-lastTime)/1000); lastTime = t;
@@ -506,12 +748,23 @@ function animate(t){ if(!lastTime) lastTime = t; const dt = Math.min(0.05, (t-la
       for(let i = stars.length -1; i>=0; i--){ const s = stars[i]; if(!s) continue; const d = map.distance(carPos, s.latlng); if(d <= pickupRadiusMeters){ if(map.hasLayer(s.marker)) map.removeLayer(s.marker); stars.splice(i,1); score += 10; updateScore(); playPickupSound(); } }
     }
 
-    if(!finished && roads.length>0){ const lastRoadLL = flattenLatLngs(roads[0].getLatLngs()); const lastPoint = lastRoadLL[lastRoadLL.length-1]; if(lastPoint && map.distance(carPos, lastPoint) <= FINISH_DISTANCE_METERS){ finished = true; finishOverlay.style.display = 'block'; playFinishSound(); } }
+    /*
+	if(!finished && roads.length>0){ const lastRoadLL = flattenLatLngs(roads[0].getLatLngs()); const lastPoint = lastRoadLL[lastRoadLL.length-1]; if(lastPoint && 
+	map.distance(carPos, lastPoint) <= FINISH_DISTANCE_METERS){ finished = true; finishOverlay.style.display = 'block'; playFinishSound(); } }
+	*/
+	
+	
+	
+	
   }
 
   if(rotWrapper){ const targetAngle = -headingDeg; const diff = shortestAngleDiff(targetAngle, displayedAngle); const step = diff * (1 - Math.exp(-8 * dt)); displayedAngle += step; if(Math.abs(shortestAngleDiff(targetAngle, displayedAngle)) < 0.02) displayedAngle = ((targetAngle%360)+360)%360; rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; }
 
   const tiltMax = 12; let angularVelocity = 0; if(keys.ArrowLeft) angularVelocity = -60; if(keys.ArrowRight) angularVelocity = 60; const lean = (angularVelocity / 60) * (Math.min(Math.abs(speed)/MAX_FORWARD_SPEED,1)) * tiltMax; carDiv.style.transform = `translate(-50%,-50%) rotate(${lean}deg)`;
+  
+  try {
+  missionManager.update(dt); // dt ist schon in deinem animate berechnet
+} catch(e){ console.warn('missionManager.update failed', e); }
 
   requestAnimationFrame(animate);
 }
@@ -526,6 +779,18 @@ map.whenReady(()=>{ const container = map.getContainer(); const pane = container
 
 /* ---------- auto-load (optional) ---------- */
 (function autoLoadGeoJSON(){ const geojsonDataUrl = 'assets/json/strecken.json'; fetch(geojsonDataUrl).then(res => { if(!res.ok) throw new Error('not found'); return res.json(); }).then(j => { if(!j || j.type !== 'FeatureCollection') return; clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0) return; placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=180; displayedAngle=-headingDeg; if(rotWrapper) rotWrapper.style.transform=`rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)'); }).catch(()=>{}); })();
+
+// auto-load missions (einfacher)
+(function autoLoadMissions(){
+  const missionsUrl = 'assets/json/missions.json';
+  missionManager.loadFromUrl(missionsUrl).then(ms=>{
+    console.log('Missions geladen:', ms.length);
+  }).catch(err=>{
+    console.warn('missionManager load failed', err);
+  });
+})();
+
+
 
 /* ============================
    Musik-Menu (kapsel, keine globalen Konflikte)
