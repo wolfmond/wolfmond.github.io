@@ -1,11 +1,11 @@
 {
   "meta": {
-    "created": "2025-09-23T00:46:04.553Z"
+    "created": "2025-09-23T01:11:17.419Z"
   },
   "missions": [
     {
       "id": "ms_mfvtp0vr4f4",
-      "title": "Start",
+      "title": "Das Paket",
       "description": "Fahre zur DHL-Packstation am Bahnhof und hole ein Paket ab.",
       "start": {
         "lat": 53.1434305374841,
@@ -23,15 +23,15 @@
     },
     {
       "id": "ms_mfvtylpg4ek",
-      "title": "Zweite",
-      "description": "Du hast das Paket. Bringe es zum Carsharing.",
+      "title": "Nordhafen",
+      "description": "Du hast das Paket. Bringe es zu unserer Kontaktperson im Nordhafen.",
       "start": {
         "lat": 53.14384078620981,
         "lng": 8.218993842601778
       },
       "target": {
-        "lat": 53.14306211470062,
-        "lng": 8.223931789398195
+        "lat": 53.14356246103119,
+        "lng": 8.239708542823793
       },
       "radius": 12,
       "onReach": {
