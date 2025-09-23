@@ -3,7 +3,7 @@
 
 All rights reserved. At least at this very moment; I'm planning to realease this game into the Creative Commons, but please let me finish it first. It's still super buggy and I have a lot of Ideas. It's playable, yet; but don't expect too much. This is merely a draft, yet. Greetz, Wolfmond
 
-Current Version: 2025-09-23_2.56
+Current Version: 2025-09-23_4.13
 
 -->
 <html lang="de">
@@ -35,7 +35,7 @@ if (!confirm(message)) {
   
   
   }
-  html,body,#map { height:100%; margin:0; padding:0; font-family: system-ui, Arial, sans-serif; }
+  html,body,#map { height:100%; margin:0; padding:0; font-family: system-ui, Arial, sans-serif; cursor:none; }
   #map { position:relative; overflow:hidden; background:#e7eef8; }
 
   /* --- Car UI --- */
@@ -84,7 +84,7 @@ background: radial-gradient(circle at center, var(--car-top), var(--car-bottom))
   .finish-overlay { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:16000; background: rgba(255,255,255,0.96); padding:18px 22px; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); display:none; font-weight:800; }
 
   /* --- Music menu (z-index high) --- */
-  .menu-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.98);width:min(860px,95vw);background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,0.12);border-radius:12px;padding:18px;opacity:0;pointer-events:none;transition:opacity .22s ease, transform .22s ease;z-index:20050}
+  .menu-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.98);width:min(860px,95vw);background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,0.12);border-radius:12px;padding:18px;opacity:0;pointer-events:none;transition:opacity .22s ease, transform .22s ease;z-index:20050; cursor:pointer;}
   .menu-panel.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
   .menu-inner{display:flex;flex-direction:column;gap:12px}
   .iframe-wrap{position:relative;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.06)}
@@ -189,9 +189,15 @@ background: radial-gradient(circle at center, var(--car-top), var(--car-bottom))
       <!--<div class="mini-status" id="miniStatus">Warte auf Interaktion…</div>-->
 	  
 	  <!-- Vollbild-Button: direkt unter den Hilfetext einfügen -->
-<div style="display:flex;justify-content:center;margin-top:8px">
+<!-- neben dem Vollbild-Button -->
+<div style="display:flex;justify-content:center;margin-top:8px;gap:8px">
   <button id="fullscreenBtn" class="menu-action" type="button" aria-pressed="false">Vollbild</button>
+  <!-- neuer SFX Toggle -->
+  <button id="sfxBtn" class="menu-action" type="button" aria-pressed="true">SFX: An</button>
+  <!-- neuer Music Toggle (optional sichtbarer Button) -->
+  <!--<button id="musicBtn" class="menu-action" type="button" aria-pressed="true">Musik: An</button>-->
 </div>
+
 
 	  <div class="controls-help" id="controlsHelp" aria-live="polite">
   <div class="help-title">Tastenbelegung</div>
@@ -202,6 +208,8 @@ background: radial-gradient(circle at center, var(--car-top), var(--car-bottom))
     <div><kbd>Leertaste</kbd> Menü öffnen / schließen</div>
   </div>
 </div>
+
+
 
     </div>
   </div>
@@ -237,7 +245,7 @@ const SPEED_GEARS = {
   8: { speed: 120, accel: 60 },
   9: { speed: 150, accel: 80 }
 };
-let currentGear = 1; 
+let currentGear = 3; 
 currentGear = Math.min(9, Math.max(1, Number(currentGear) || 1));
 
 let MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed; let ACCEL = SPEED_GEARS[currentGear].accel;
@@ -494,9 +502,25 @@ let driveSound = null;
 try{ driveSound = new Howl({ src: ['assets/mp3/369718__setuniman__in-the-seventies-1o34.mp3'], loop:true, volume:0.3 }); }catch(e){ console.warn('Howler not available or file missing'); }
 function startDriving(){ /*if(driveSound && !driveSound.playing()) driveSound.play(); */}
 function stopDriving(){ /*if(driveSound) driveSound.stop();*/ }
-function playPickupSound(){ try{ zzfx(...[,,104,.04,.02,.07,,.8,,138,,,,,,,,.85,.02]); }catch(e){} }
-function playBounceSound(){ try{ zzfx(0.2,0,200,0.01,0.08,0.14,1,0,0.2,0,0.14); }catch(e){} }
-function playFinishSound(){ try{ zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2); }catch(e){} }
+function playPickupSound(){
+  if(!sfxEnabled) return; 
+  try{ zzfx(...[,,104,.04,.02,.07,,.8,,138,,,,,,,,.85,.02]); }catch(e){}
+}
+
+function playMissionGoalSound(){
+  if(!sfxEnabled) return; 
+  try{ zzfx(...[0.5,0,311,.08,.21,.16,,2.8,,,374,.19,.08,,,,.17,.99,.29,.1,-1484]);  }catch(e){}
+  
+}
+function playBounceSound(){
+  if(!sfxEnabled) return;
+  try{ zzfx(0.2,0,200,0.01,0.08,0.14,1,0,0.2,0,0.14); }catch(e){}
+}
+function playFinishSound(){
+  if(!sfxEnabled) return;
+  try{ zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2); }catch(e){}
+}
+
 
 
 /* ---------- CAR ---------- */
@@ -626,7 +650,7 @@ function advanceMission(){
     score += Number(cm.onReach.score) || 0;
     updateScore();
   }
-  playPickupSound();
+  playMissionGoalSound();
 
   // Entferne Marker der aktuellen Mission (falls vorhanden)
   if(state.markers[state.current] && map.hasLayer(state.markers[state.current])){
@@ -778,7 +802,9 @@ let rotWrapper = null;
 map.whenReady(()=>{ const container = map.getContainer(); const pane = container.querySelector('.leaflet-map-pane'); if(!pane) return; const wrapper = document.createElement('div'); wrapper.className = 'rotate-wrapper'; wrapper.style.position = 'absolute'; wrapper.style.inset = '0'; wrapper.style.willChange = 'transform'; container.insertBefore(wrapper, pane); wrapper.appendChild(pane); rotWrapper = wrapper; rebuildRoadPixelSegments(); alert('ℹ Press SPACE for Menu.'); });
 
 /* ---------- auto-load (optional) ---------- */
-(function autoLoadGeoJSON(){ const geojsonDataUrl = 'assets/json/strecken.json'; fetch(geojsonDataUrl).then(res => { if(!res.ok) throw new Error('not found'); return res.json(); }).then(j => { if(!j || j.type !== 'FeatureCollection') return; clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0) return; placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=180; displayedAngle=-headingDeg; if(rotWrapper) rotWrapper.style.transform=`rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)'); }).catch(()=>{}); })();
+(function autoLoadGeoJSON(){ const geojsonDataUrl = 'assets/json/strecken.json'; fetch(geojsonDataUrl).then(res => { if(!res.ok) throw new Error('not found'); return res.json(); }).then(j => { if(!j || j.type !== 'FeatureCollection') return; clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0) return; placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg = 90;
+displayedAngle = -headingDeg;
+if (rotWrapper) rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)'); }).catch(()=>{}); })();
 
 // auto-load missions (einfacher)
 (function autoLoadMissions(){
@@ -789,6 +815,80 @@ map.whenReady(()=>{ const container = map.getContainer(); const pane = container
     console.warn('missionManager load failed', err);
   });
 })();
+
+
+
+
+/* ---- Persistente Audio-Einstellungen (global / simple) ---- */
+const MUSIC_KEY = 'oldenburg_kart_music'; // '1' = Wunsch: an, '0' = Wunsch: aus
+const SFX_KEY   = 'oldenburg_kart_sfx';   // '1' = an, '0' = aus
+
+// initial values (load from localStorage; default true)
+let musicDesired = (localStorage.getItem(MUSIC_KEY) !== '0'); // true unless explicitly '0'
+let sfxEnabled   = (localStorage.getItem(SFX_KEY)   !== '0'); // true unless explicitly '0'
+
+// update UI helper (safe if elements not present yet)
+function setButtonState(btn, enabled, labelOn, labelOff){
+  if(!btn) return;
+  btn.setAttribute('aria-pressed', String(Boolean(enabled)));
+  btn.textContent = enabled ? labelOn : labelOff;
+}
+
+// wire up buttons if present (menu buttons created in DOM)
+document.addEventListener('DOMContentLoaded', ()=> {
+  const sfxBtn = document.getElementById('sfxBtn');
+  const musicBtn = document.getElementById('musicBtn');
+
+  setButtonState(sfxBtn, sfxEnabled, 'SFX: An', 'SFX: Aus');
+  setButtonState(musicBtn, musicDesired, 'Musik: An', 'Musik: Aus');
+
+  if(sfxBtn){
+    sfxBtn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      sfxEnabled = !sfxEnabled;
+      localStorage.setItem(SFX_KEY, sfxEnabled ? '1' : '0');
+      setButtonState(sfxBtn, sfxEnabled, 'SFX: An', 'SFX: Aus');
+      // optional visual feedback
+      sfxBtn.classList.toggle('menu-action', true);
+    });
+  }
+
+  if(musicBtn){
+    musicBtn.addEventListener('click', async (ev)=>{
+      ev.preventDefault();
+      musicDesired = !musicDesired;
+      localStorage.setItem(MUSIC_KEY, musicDesired ? '1' : '0');
+      setButtonState(musicBtn, musicDesired, 'Musik: An', 'Musik: Aus');
+      // if user already interacted with player, toggle play/pause if desired
+      try{ if(window.OldenburgAudio && typeof window.OldenburgAudio.applyMusicPreference === 'function'){
+        window.OldenburgAudio.applyMusicPreference(musicDesired);
+      }}catch(e){}
+    });
+  }
+});
+
+// --- S-Taste: SFX an/aus (case-insensitive) ---
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+  if (!e.key) return;
+  if (e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    // toggle and persist
+    sfxEnabled = !sfxEnabled;
+    try { localStorage.setItem(SFX_KEY, sfxEnabled ? '1' : '0'); } catch (err) {}
+    // update button UI if present
+    const sfxBtn = document.getElementById('sfxBtn');
+    if (sfxBtn) setButtonState(sfxBtn, sfxEnabled, 'SFX: An', 'SFX: Aus');
+    // small audible feedback when enabling (won't play if disabled)
+    if (sfxEnabled) {
+      try { playPickupSound(); } catch (err) {}
+    }
+    console.log('SFX toggled ->', sfxEnabled ? 'AN' : 'AUS');
+  }
+}, { passive: false });
+
+
 
 
 

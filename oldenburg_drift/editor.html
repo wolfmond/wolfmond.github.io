@@ -79,6 +79,34 @@ if (!confirm(message)) {
 .mission-btn:active { transform: translateY(1px); }
 .mission-btn[disabled] { opacity:0.45; cursor:default; }
 
+
+
+/* --- Leaflet Draw: rechts oben vertikal anordnen und Platz unter Score schaffen --- */
+.leaflet-top.leaflet-right .leaflet-draw-toolbar,
+.leaflet-bottom.leaflet-right .leaflet-draw-toolbar {
+  display: flex;
+  flex-direction: column;    /* vertikale Anordnung der Sektionen/Buttons */
+  gap: 8px;
+  right: 12px;               /* Abstand vom rechten Rand */
+  left: auto !important;
+  top: 56px !important;      /* nach unten schieben, damit Score (top:10px) nicht überlappt.
+                                Passe 56px an, falls du höhere/niedrigere Abstände brauchst. */
+  z-index: 20050 !important; /* höher als .ui/.score um sicher sichtbar zu sein */
+}
+
+/* section → vertikale Buttons */
+.leaflet-draw-toolbar .leaflet-draw-section { display:flex; flex-direction: column; gap:8px; }
+
+/* Sicherstellen, dass die Toolbar über deiner .ui/Score liegt */
+.leaflet-draw-toolbar { z-index: 20050 !important; }
+
+/* Falls Leaflet die Toolbar noch an left hängt: forciere die Position (Falle für ältere CSS) */
+.leaflet-top .leaflet-draw-toolbar { left: auto !important; right: 12px !important; }
+
+.leaflet-top.leaflet-right {
+  top: 100px;
+}
+
 </style>
 </head>
 <body>
@@ -154,14 +182,30 @@ if (!confirm(message)) {
    ========================== */
 
 /* Map & Draw */
-const map = L.map('map', { keyboard: false }).setView([53.1430, 8.2140], 16);
+//const map = L.map('map', { keyboard: false }).setView([53.1430, 8.2140], 16);
+const map = L.map('map', { keyboard: false, zoomControl: false }).setView([53.1430, 8.2140], 16);
+L.control.zoom({ position: 'topright' }).addTo(map);
+
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 const drawnItems = new L.FeatureGroup().addTo(map);
 const drawControl = new L.Control.Draw({
-  draw: { polyline:true, polygon:false, rectangle:false, circle:false, marker:false, circlemarker:false },
-  edit: { featureGroup: drawnItems, remove:true }
+  position: 'topright', // <-- hier rechts platzieren
+  draw: {
+    polyline: true,
+    polygon: false,
+    rectangle: false,
+    circle: false,
+    marker: false,
+    circlemarker: false
+  },
+  edit: {
+    featureGroup: drawnItems,
+    remove: true
+  }
 });
 map.addControl(drawControl);
+
+
 
 /* State */
 let roads = []; // {id, layer, name}
@@ -825,6 +869,9 @@ document.getElementById('importMissions').addEventListener('change', (ev)=> { co
 
 /* keep keyboard focus sane */
 map.on('click', ()=>{ try{ (document.activeElement||document.body).blur(); } catch(e){} });
+
+
+
 
 </script>
 </body>
