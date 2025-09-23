@@ -1,0 +1,831 @@
+<!doctype html>
+<!-- 
+
+All rights reserved. At least at this very moment; I'm planning to realease this game into the Creative Commons, but please let me finish it first. It's still super buggy and I have a lot of Ideas. It's playable, yet; but don't expect too much. This is merely a draft, yet. Greetz, Wolfmond
+
+Current Version: 2025-09-23_2.56
+
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Oldenburg Kart — Editor & Player (with rectangle delete)</title>
+<script>
+const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use. All Rights Reserved. No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
+
+// Zeigt eine Bestätigungsbox an
+if (!confirm(message)) {
+  // Wenn der Nutzer auf "Abbrechen" klickt
+  window.location.href = "about:blank";
+}
+</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+  html,body,#map { height:100%; margin:0; padding:0; }
+  #map { position:relative; }
+  .ui {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 10000;
+    background: rgba(255,255,255,0.96);
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.12);
+    font-family: system-ui, Arial, sans-serif;
+    width: 300px;
+  }
+  .ui h3 { margin: 0 0 8px 0; font-size: 16px; }
+  .ui button, .ui input[type=file], .ui label, .ui input[type=text] { display:block; margin:6px 0; width:100%; box-sizing:border-box; }
+  .score { position:absolute; top:10px; right:10px; z-index:10000; background:rgba(255,255,255,0.95); padding:8px 12px; border-radius:8px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+  .roads-list { max-height:120px; overflow:auto; border:1px solid #eee; padding:6px; border-radius:6px; background:#fff; }
+  .roads-list div { padding:6px; cursor:pointer; border-radius:6px; }
+  .roads-list div:hover { background:#f6f9ff; }
+  .roads-list .active { background:#dbeeff; font-weight:700; }
+  .small { font-size:12px; color:#666; margin-top:6px; }
+  #finishOverlay {
+    position: absolute;
+    left: 50%;
+    top: 18%;
+    transform: translateX(-50%);
+    z-index: 12000;
+    background: rgba(255,255,255,0.98);
+    padding: 14px 18px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    font-weight:800;
+    display:none;
+  }
+  
+  /* Mission list arrow buttons */
+.mission-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:6px;
+  border-radius:6px;
+}
+.mission-row .title { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:6px; }
+.mission-row .controls { display:flex; gap:6px; }
+.mission-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:6px; border:1px solid rgba(0,0,0,0.06);
+  background:#fff; cursor:pointer; font-weight:700;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+.mission-btn:active { transform: translateY(1px); }
+.mission-btn[disabled] { opacity:0.45; cursor:default; }
+
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="ui">
+  <h3>Editor & Player</h3>
+  <div class="small">Zeichne Wege (Polyline). Klicke eine Linie, um sie auszuwählen. Play startet Missionen.</div>
+
+  <div style="margin-top:8px">
+    <button id="placeStars">Sterne auf aktiver Strecke platzieren</button>
+    <button id="start">Play (abfahren + Missionen)</button>
+    <button id="stop">Stop</button>
+    <label><input type="checkbox" id="autoPlace"/> Sterne automatisch nach Änderungen platzieren</label>
+    <button id="clearStars">Sterne entfernen</button>
+  </div>
+
+  <hr/>
+
+  <div><strong>Strecken</strong></div>
+  <div class="roads-list" id="roadsList"></div>
+  <div style="display:flex;gap:6px;margin-top:6px;">
+    <button id="deleteActiveRoad" style="flex:1">Aktive Strecke löschen</button>
+    <button id="rectDeleteBtn" style="flex:1">Rechteck-Auswahl (löschen)</button>
+  </div>
+
+  <hr/>
+
+  <div><strong>Missionen</strong></div>
+  <div id="missionsContainer" style="margin-top:6px;">
+    <div id="missionsList" class="roads-list" style="max-height:120px;"></div>
+
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button id="addMission" style="flex:1;">Neue Mission</button>
+      <button id="deleteMission" style="flex:1;">Löschen</button>
+    </div>
+
+    <div style="margin-top:8px;">
+      <input id="missionTitleInput" placeholder="Titel" />
+      <input id="missionDescInput" placeholder="Beschreibung" />
+      <div style="display:flex;gap:6px;">
+        <button id="setStartBtn" style="flex:1;">Start setzen (Klick)</button>
+        <button id="setTargetBtn" style="flex:1;">Ziel setzen (Klick)</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button id="placeMissionMarkers" style="flex:1;">Marker anzeigen</button>
+        <button id="clearMissionMarkers" style="flex:1;">Marker entfernen</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button id="exportMissions" style="flex:1;">Export Missions.json</button>
+        <input id="importMissions" type="file" accept="application/json" style="flex:1" />
+      </div>
+
+      <div class="small">"Rechteck-Auswahl" zieht ein Rechteck; Segmente darin werden entfernt.</div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <button id="exportGeo">Exportiere GeoJSON</button>
+  <input id="importFile" type="file" accept="application/json" />
+  <button id="clearAll">Alles löschen</button>
+</div>
+
+<div class="score">Score: <span id="score">0</span></div>
+<div id="finishOverlay">Strecke beendet 🎉</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+/* ==========================
+   Editor + Player + Rect-delete
+   ========================== */
+
+/* Map & Draw */
+const map = L.map('map', { keyboard: false }).setView([53.1430, 8.2140], 16);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+const drawnItems = new L.FeatureGroup().addTo(map);
+const drawControl = new L.Control.Draw({
+  draw: { polyline:true, polygon:false, rectangle:false, circle:false, marker:false, circlemarker:false },
+  edit: { featureGroup: drawnItems, remove:true }
+});
+map.addControl(drawControl);
+
+/* State */
+let roads = []; // {id, layer, name}
+let activeRoadId = null;
+let stars = [];
+let score = 0;
+function updateScore(){ document.getElementById('score').textContent = score; }
+
+/* Car & playback */
+const car = L.circleMarker([53.1430,8.2140], { radius:8, color:'#0b6', fillColor:'#0b6', fillOpacity:1 }).addTo(map);
+let playing = false;
+let followLoopId = null;
+
+/* ********** Road helpers ********** */
+function refreshRoadsList(){
+  const list = document.getElementById('roadsList');
+  list.innerHTML = '';
+  roads.forEach(r=>{
+    const d = document.createElement('div');
+    d.textContent = (r.name || ('Strecke ' + r.id));
+    d.dataset.id = r.id;
+    if(r.id===activeRoadId) d.classList.add('active');
+    d.addEventListener('click', ()=> setActiveRoad(r.id));
+    list.appendChild(d);
+  });
+}
+
+function setActiveRoad(id){
+  activeRoadId = id;
+  roads.forEach(r => {
+    try { r.layer.setStyle({ color: r.id===id ? '#ff8800' : '#3388ff' }); } catch(e){}
+  });
+  refreshRoadsList();
+}
+
+function addRoad(layer){
+  const id = 'r_' + Date.now().toString(36) + Math.floor(Math.random()*9999).toString(36);
+  const entry = { id, layer, name: null };
+  roads.push(entry);
+  layer.on('click', ()=> setActiveRoad(id));
+  try { layer.setStyle({ color:'#3388ff', weight:4 }); } catch(e){}
+  drawnItems.addLayer(layer);
+  setActiveRoad(id);
+  if(document.getElementById('autoPlace').checked) placeStarsOnRoad(id, 20);
+}
+
+function removeRoadById(id){
+  const idx = roads.findIndex(r=> r.id===id);
+  if(idx === -1) return;
+  drawnItems.removeLayer(roads[idx].layer);
+  roads.splice(idx,1);
+  if(activeRoadId === id) activeRoadId = roads.length ? roads[0].id : null;
+  refreshRoadsList();
+}
+
+/* Draw created handler (supports both polyline and rectangle created by L.Draw.Rectangle) */
+map.on(L.Draw.Event.CREATED, function(e){
+  // e.layerType exists when created via draw control; L.Draw.Rectangle create triggers same event with layerType 'rectangle'
+  if(e.layerType === 'polyline' || e.layer instanceof L.Polyline){
+    addRoad(e.layer);
+  } else if(e.layerType === 'rectangle' || e.layer instanceof L.Rectangle){
+    // rectangle selection: treat as selection rectangle -> do delete/split
+    processRectSelectionAndDelete(e.layer);
+    // remove rectangle visual
+    // (it was only used as selection)
+    try { map.removeLayer(e.layer); } catch(e){}
+  } else {
+    // ignore other types
+  }
+});
+
+/* Keep roads array in sync when user deletes via draw toolbar */
+map.on('draw:deleted', function(e){
+  e.layers.eachLayer(l=>{
+    // find by leaflet id and remove from our roads[]
+    const idx = roads.findIndex(r=> r.layer._leaflet_id === l._leaflet_id);
+    if(idx !== -1) roads.splice(idx,1);
+  });
+  if(!roads.find(r=> r.id===activeRoadId)) activeRoadId = roads.length ? roads[0].id : null;
+  refreshRoadsList();
+});
+
+/* ********** Stars ********** */
+function clearStars(){ stars.forEach(s=> map.removeLayer(s)); stars = []; }
+function placeStarsOnRoad(roadId, spacingMeters = 20){
+  const r = roads.find(x=> x.id === roadId);
+  if(!r) return;
+  clearStars();
+  const latlngs = r.layer.getLatLngs();
+  const samples = samplePointsAlongPath(latlngs, spacingMeters);
+  samples.forEach(p=>{
+    const s = L.circleMarker(p, { radius:6, color:'#ffdc4d', fillColor:'#ffd83d', fillOpacity:0.95, interactive:false }).addTo(map);
+    stars.push(s);
+  });
+}
+function samplePointsAlongPath(latlngs, spacingMeters){
+  const out = [];
+  if(!latlngs || latlngs.length < 2) return out;
+  let traveled = 0;
+  let nextTarget = spacingMeters;
+  for(let i=0;i<latlngs.length-1;i++){
+    const a = latlngs[i], b = latlngs[i+1];
+    const segLen = map.distance(a,b);
+    while(nextTarget <= traveled + segLen){
+      const t = (nextTarget - traveled)/segLen;
+      out.push(L.latLng(a.lat + (b.lat-a.lat)*t, a.lng + (b.lng-a.lng)*t));
+      nextTarget += spacingMeters;
+    }
+    traveled += segLen;
+  }
+  return out;
+}
+
+/* ********** Path-following ********** (same as before, unchanged logic) */
+let followState = null;
+function buildFollowPathFromRoad(roadId){
+  const r = roads.find(x=> x.id === roadId);
+  if(!r) return null;
+  const latlngs = r.layer.getLatLngs();
+  if(!latlngs || latlngs.length < 2) return null;
+  const segs = [];
+  for(let i=0;i<latlngs.length-1;i++){
+    segs.push({ a: latlngs[i], b: latlngs[i+1], len: map.distance(latlngs[i], latlngs[i+1]) });
+  }
+  return { segs, total: segs.reduce((s,x)=>s+x.len,0) };
+}
+
+function startFollow(speedMetersPerSec = 20){
+  if(!activeRoadId){ alert('Bitte zuerst eine Strecke auswählen.'); return; }
+  const path = buildFollowPathFromRoad(activeRoadId);
+  if(!path){ alert('Kein gültiger Pfad.'); return; }
+  playing = true;
+  followState = { path, segIndex:0, offset:0, speed: speedMetersPerSec };
+  if(followLoopId) cancelAnimationFrame(followLoopId);
+  followLoopId = requestAnimationFrame(followStep);
+}
+function stopFollow(){ playing = false; if(followLoopId) cancelAnimationFrame(followLoopId); followLoopId = null; followState = null; }
+
+let lastFrameTime = null;
+function followStep(ts){
+  if(!lastFrameTime) lastFrameTime = ts;
+  const dt = (ts - lastFrameTime)/1000; lastFrameTime = ts;
+  if(!playing || !followState){ lastFrameTime = null; return; }
+  const fs = followState;
+  let move = fs.speed * dt;
+  while(move > 0 && fs.segIndex < fs.path.segs.length){
+    const seg = fs.path.segs[fs.segIndex];
+    const remain = seg.len - fs.offset;
+    if(move < remain){
+      fs.offset += move; move = 0;
+      const t = fs.offset / seg.len;
+      const lat = seg.a.lat + (seg.b.lat - seg.a.lat) * t;
+      const lng = seg.a.lng + (seg.b.lng - seg.a.lng) * t;
+      car.setLatLng([lat,lng]);
+    } else {
+      move -= remain;
+      fs.segIndex += 1;
+      fs.offset = 0;
+      if(fs.segIndex >= fs.path.segs.length){
+        car.setLatLng(fs.path.segs[fs.path.segs.length-1].b);
+        stopFollow();
+        break;
+      }
+    }
+  }
+
+  collectStarsNearCar();
+  try { missionManager.checkProgress(); } catch(e){ console.warn('mission check failed', e); }
+
+  if(playing) followLoopId = requestAnimationFrame(followStep);
+}
+
+/* manual driving (keeps same behavior) */
+const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
+window.addEventListener('keydown', (e)=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+    e.preventDefault(); keys[e.key] = true; if(!playing) manualDriveStart();
+  }
+}, { passive:false });
+window.addEventListener('keyup', (e)=>{ if(keys[e.key]!==undefined) keys[e.key] = false; }, { passive:false });
+
+let manualRAF = null, lastManualTime = null;
+function manualDriveStart(){ if(manualRAF) return; lastManualTime = null; manualRAF = requestAnimationFrame(manualDriveStep); }
+function manualDriveStop(){ if(manualRAF) cancelAnimationFrame(manualRAF); manualRAF = null; lastManualTime = null; }
+
+function manualDriveStep(ts){
+  if(!lastManualTime) lastManualTime = ts;
+  const dt = (ts - lastManualTime)/1000; lastManualTime = ts;
+  const speed = 0.0009;
+  let vy=0, vx=0;
+  if(keys.ArrowUp) vy += speed*dt;
+  if(keys.ArrowDown) vy -= speed*dt;
+  if(keys.ArrowLeft) vx -= speed*dt;
+  if(keys.ArrowRight) vx += speed*dt;
+  if(vx!==0||vy!==0){
+    const pos = car.getLatLng(), candidate = L.latLng(pos.lat+vy, pos.lng+vx);
+    if(isNearAnyRoad(candidate, 12)) car.setLatLng(candidate);
+    collectStarsNearCar();
+  }
+  try { missionManager.checkProgress(); } catch(e){}
+  if(keys.ArrowUp||keys.ArrowDown||keys.ArrowLeft||keys.ArrowRight) manualRAF = requestAnimationFrame(manualDriveStep);
+  else manualDriveStop();
+}
+
+function collectStarsNearCar(){
+  const pCar = map.latLngToLayerPoint(car.getLatLng());
+  for(let i=stars.length-1; i>=0; i--){
+    const s = stars[i], pStar = map.latLngToLayerPoint(s.getLatLng());
+    if(pCar.distanceTo(pStar) < 12){
+      map.removeLayer(s); stars.splice(i,1); score += 10; updateScore();
+      try{ if(typeof zzfx === 'function') zzfx(...[,,104,.04,.02,.07,,.8,,138,,,,,,,,.85,.02]); } catch(e){}
+    }
+  }
+}
+
+function isNearAnyRoad(latlng, pxTol=10){
+  return roads.some(r=>{
+    const ll = r.layer.getLatLngs();
+    for(let i=0;i<ll.length-1;i++){
+      const a = map.latLngToLayerPoint(ll[i]), b = map.latLngToLayerPoint(ll[i+1]), p = map.latLngToLayerPoint(latlng);
+      if(L.LineUtil.pointToSegmentDistance(p,a,b) <= pxTol) return true;
+    }
+    return false;
+  });
+}
+
+/* ********** Rectangle selection delete logic **********
+   - User draws a rectangle (via L.Draw.Rectangle launched by button).
+   - For each polyline, we iterate segments; if the segment midpoint is inside rectangle
+     we treat that segment as selected -> it's removed.
+   - Remaining contiguous outside-segments are reconstructed as new polylines.
+   - If nothing remains, the entire road is removed.
+   - This is fast and predictable for interactive editing.
+   *********************************************** */
+
+function processRectSelectionAndDelete(rectLayer){
+  if(!rectLayer || !(rectLayer instanceof L.Rectangle)) return;
+  const bounds = rectLayer.getBounds();
+  // Accumulate new road layers to add and original roads to remove
+  const toRemoveRoadIds = [];
+  const newPolylines = []; // {latlngs, originalId}
+
+  for(const r of [...roads]) {
+    const latlngs = r.layer.getLatLngs();
+    if(!latlngs || latlngs.length < 2) continue;
+    // Build kept sequences based on segment-midpoint test
+    let seq = [];
+    const keptSequences = [];
+    for(let i=0;i<latlngs.length-1;i++){
+      const a = latlngs[i], b = latlngs[i+1];
+      const mid = L.latLng((a.lat+b.lat)/2, (a.lng+b.lng)/2);
+      const inside = bounds.contains(mid);
+      if(!inside){
+        // keep this segment -> append a and b to sequence (maintain continuity)
+        if(seq.length === 0) seq.push(a); // start with a
+        seq.push(b);
+      } else {
+        // segment is inside selection -> finalize current sequence
+        if(seq.length >= 2){ keptSequences.push(seq); seq = []; }
+        else { seq = []; }
+      }
+    }
+    if(seq.length >= 2) keptSequences.push(seq);
+
+    if(keptSequences.length === 0){
+      // nothing remains -> remove whole road
+      toRemoveRoadIds.push(r.id);
+    } else {
+      // There are kept pieces -> replace original with first piece and add additional pieces as new roads
+      // We will remove original and create new ones from sequences
+      toRemoveRoadIds.push(r.id);
+      for(const seqPts of keptSequences){
+        // seqPts are arrays of LatLng objects
+        newPolylines.push({ latlngs: seqPts, originalId: r.id });
+      }
+    }
+  }
+
+  // Apply changes: remove originals
+  toRemoveRoadIds.forEach(id => {
+    const idx = roads.findIndex(rr=> rr.id === id);
+    if(idx !== -1){
+      try { drawnItems.removeLayer(roads[idx].layer); } catch(e){}
+      roads.splice(idx,1);
+    }
+  });
+
+  // Add new polylines
+  const prevAuto = document.getElementById('autoPlace').checked;
+  // temporarily disable auto-place to avoid clearing stars repeatedly
+  document.getElementById('autoPlace').checked = false;
+  newPolylines.forEach(obj=>{
+    const pl = L.polyline(obj.latlngs);
+    addRoad(pl);
+  });
+  // restore autoPlace
+  document.getElementById('autoPlace').checked = prevAuto;
+
+  refreshRoadsList();
+}
+
+/* ********** UI wiring ********** */
+document.getElementById('placeStars').addEventListener('click', ()=>{ if(!activeRoadId){ alert('Bitte Strecke auswählen.'); return; } placeStarsOnRoad(activeRoadId, 20); });
+document.getElementById('start').addEventListener('click', ()=> { try{ missionManager.startMissions(false); } catch(e){}; startFollow(18); });
+document.getElementById('stop').addEventListener('click', ()=> { stopFollow(); try{ missionManager.stopMissions(); } catch(e){}; });
+document.getElementById('clearStars').addEventListener('click', ()=> clearStars());
+
+document.getElementById('deleteActiveRoad').addEventListener('click', ()=>{
+  if(!activeRoadId){ alert('Keine aktive Strecke ausgewählt.'); return; }
+  if(!confirm('Aktive Strecke wirklich löschen?')) return;
+  removeRoadById(activeRoadId);
+});
+
+/* Rectangle delete: we instantiate a dedicated rectangle drawer to avoid changing drawControl defaults */
+const rectDrawer = new L.Draw.Rectangle(map, { shapeOptions: { color:'#ff3333', weight:2, dashArray: '6,6' } });
+document.getElementById('rectDeleteBtn').addEventListener('click', ()=>{
+  // enable rectangle drawer
+  rectDrawer.enable();
+});
+
+/* export/import geojson */
+document.getElementById('exportGeo').addEventListener('click', ()=>{
+  const features = roads.map(r=> r.layer.toGeoJSON());
+  const geo = { type:'FeatureCollection', features };
+  const blob = new Blob([JSON.stringify(geo, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'strecken.geojson'; a.click(); URL.revokeObjectURL(url);
+});
+document.getElementById('importFile').addEventListener('change', (ev)=>{
+  const f = ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const j = JSON.parse(e.target.result);
+      if(j.type === 'FeatureCollection' && Array.isArray(j.features)){
+        j.features.forEach(fe=>{
+          const layer = L.geoJSON(fe);
+          layer.eachLayer(l=>{ if(l instanceof L.Polyline) addRoad(l); });
+        });
+      } else alert('Keine gültige FeatureCollection');
+    } catch(err){ alert('Fehler beim Einlesen: ' + err.message); }
+  };
+  reader.readAsText(f);
+});
+document.getElementById('clearAll').addEventListener('click', ()=>{
+  if(!confirm('Alles löschen?')) return;
+  roads.forEach(r=> drawnItems.removeLayer(r.layer));
+  roads = []; activeRoadId = null; refreshRoadsList(); clearStars(); score = 0; updateScore(); stopFollow();
+});
+
+/* keep roads[] in sync after draw:deleted event handled above (draw:deleted) */
+
+/* mission manager (same as previous: editor + runtime) */
+/* =========================
+   MissionEditor / MissionManager (Reorder-ready)
+   Drop-in replacement: ersetze deine alte missionManager-Definition damit
+   ========================= */
+const missionManager = (function(){
+  let missions = [];           // ordered array
+  const markersGroup = L.layerGroup().addTo(map);
+  let currentId = null;
+  const listEl = document.getElementById('missionsList');
+
+  function uid(){ return 'ms_' + Date.now().toString(36) + Math.floor(Math.random()*9999).toString(36); }
+  function createEmptyMission(){ return { id: uid(), title:'Neue Mission', description:'', start:null, target:null, radius:12, marker:true, onReach:{score:100} }; }
+
+  /* ---------- render list with up/down buttons ---------- */
+  function renderList(){
+    listEl.innerHTML = '';
+    missions.forEach((m, idx) => {
+      const row = document.createElement('div');
+      row.className = 'mission-row' + (m.id === currentId ? ' active' : '');
+      row.dataset.id = m.id;
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'title';
+      titleEl.textContent = (m.title || '(ohne Titel)');
+      titleEl.title = (m.title || '(ohne Titel)') + (m.description ? ' — ' + m.description : '');
+      titleEl.addEventListener('click', () => selectMission(m.id));
+
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+
+      const upBtn = document.createElement('button');
+      upBtn.className = 'mission-btn';
+      upBtn.innerHTML = '▲';
+      upBtn.title = 'Eine Position nach oben';
+      upBtn.disabled = (idx === 0);
+      upBtn.addEventListener('click', (ev) => { ev.stopPropagation(); moveMission(m.id, -1); });
+
+      const downBtn = document.createElement('button');
+      downBtn.className = 'mission-btn';
+      downBtn.innerHTML = '▼';
+      downBtn.title = 'Eine Position nach unten';
+      downBtn.disabled = (idx === missions.length - 1);
+      downBtn.addEventListener('click', (ev) => { ev.stopPropagation(); moveMission(m.id, +1); });
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'mission-btn';
+      delBtn.innerHTML = '✕';
+      delBtn.title = 'Mission löschen';
+      delBtn.addEventListener('click', (ev) => { ev.stopPropagation(); deleteMissionById(m.id); });
+
+      controls.appendChild(upBtn);
+      controls.appendChild(downBtn);
+      controls.appendChild(delBtn);
+
+      row.appendChild(titleEl);
+      row.appendChild(controls);
+      listEl.appendChild(row);
+    });
+  }
+
+  /* ---------- selection ---------- */
+  function selectMission(id){
+    currentId = id;
+    renderList();
+    const m = missions.find(x => x.id === id);
+    if(!m) return;
+    document.getElementById('missionTitleInput').value = m.title || '';
+    document.getElementById('missionDescInput').value = m.description || '';
+    renderMarkers();
+  }
+
+  /* ---------- add / delete ---------- */
+  function addMission(){
+    const m = createEmptyMission();
+    missions.push(m);
+    selectMission(m.id);
+  }
+
+  function deleteCurrentMission(){
+    if(!currentId) return;
+    deleteMissionById(currentId);
+  }
+
+  function deleteMissionById(id){
+    const idx = missions.findIndex(x => x.id === id);
+    if(idx === -1) return;
+    const m = missions[idx];
+    // cleanup markers
+    if(m._startMarker) { markersGroup.removeLayer(m._startMarker); delete m._startMarker; }
+    if(m._targetMarker) { markersGroup.removeLayer(m._targetMarker); delete m._targetMarker; }
+    missions.splice(idx,1);
+    // adjust selection: try same index, else previous, else null
+    if(missions.length === 0) currentId = null;
+    else if(idx < missions.length) currentId = missions[idx].id;
+    else currentId = missions[missions.length-1].id;
+    renderList();
+    renderMarkers();
+  }
+
+  /* ---------- update from inputs ---------- */
+  function updateCurrentFromInputs(){
+    if(!currentId) return;
+    const m = missions.find(x => x.id === currentId);
+    if(!m) return;
+    m.title = document.getElementById('missionTitleInput').value || m.title;
+    m.description = document.getElementById('missionDescInput').value || m.description;
+    renderList();
+    renderMarkers();
+  }
+
+  /* ---------- click mode: set start/target ---------- */
+  function enterClickMode(mode){
+    map.getContainer().style.cursor = 'crosshair';
+    const handler = function(ev){
+      map.off('click', handler);
+      map.getContainer().style.cursor = '';
+      if(!currentId){ alert('Bitte zuerst eine Mission auswählen.'); return; }
+      const m = missions.find(x => x.id === currentId);
+      if(!m) return;
+      const latlng = ev.latlng;
+      if(mode === 'setStart') m.start = { lat: latlng.lat, lng: latlng.lng };
+      else m.target = { lat: latlng.lat, lng: latlng.lng };
+      renderMarkers();
+    };
+    map.on('click', handler);
+  }
+
+  /* ---------- markers ---------- */
+  function clearAllMarkers(){
+    markersGroup.clearLayers();
+    missions.forEach(m => { delete m._startMarker; delete m._targetMarker; });
+  }
+  function renderMarkers(){
+    clearAllMarkers();
+    missions.forEach(m => {
+      if(m.marker && m.start){
+        const mk = L.circleMarker([m.start.lat, m.start.lng], { radius:6, color:'#2bff6b', weight:2, fill:false, interactive:false }).addTo(markersGroup);
+        mk.bindTooltip('Start: ' + (m.title||''), { permanent:false });
+        m._startMarker = mk;
+      }
+      if(m.marker && m.target){
+        const mk2 = L.circleMarker([m.target.lat, m.target.lng], { radius:8, color:'#ff6b6b', weight:2, fill:false, interactive:false }).addTo(markersGroup);
+        mk2.bindTooltip('Ziel: ' + (m.title||''), { permanent:false });
+        m._targetMarker = mk2;
+      }
+    });
+  }
+
+  /* ---------- export / import (keeps order) ---------- */
+  function exportMissions(){
+    const clean = missions.map(m => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      start: m.start || null,
+      target: m.target || null,
+      radius: Number(m.radius || 12),
+      onReach: m.onReach || { score: 100 },
+      marker: m.marker !== undefined ? m.marker : true
+    }));
+    const json = { meta: { created: (new Date()).toISOString() }, missions: clean };
+    const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'missions.json'; a.click(); URL.revokeObjectURL(url);
+  }
+
+  function importMissionsFromFile(file){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        const parsed = JSON.parse(e.target.result);
+        const arr = Array.isArray(parsed.missions) ? parsed.missions : (Array.isArray(parsed) ? parsed : []);
+        arr.forEach(m => {
+          const nm = {
+            id: m.id || uid(),
+            title: m.title || (m.name || 'Import'),
+            description: m.description || '',
+            start: m.start || (m.startLat && m.startLng ? { lat:Number(m.startLat), lng:Number(m.startLng) } : null),
+            target: m.target || (m.lat && m.lng ? { lat:Number(m.lat), lng:Number(m.lng) } : null),
+            radius: Number(m.radius || 12),
+            marker: m.marker !== undefined ? m.marker : true,
+            onReach: m.onReach || { score: 100 }
+          };
+          missions.push(nm);
+        });
+        if(!currentId && missions.length) currentId = missions[0].id;
+        renderList();
+        renderMarkers();
+      } catch(err){
+        alert('Fehler beim Einlesen: ' + (err && err.message ? err.message : err));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- reorder API (move by delta) ---------- */
+  function moveMission(id, delta){
+    const idx = missions.findIndex(x => x.id === id);
+    if(idx === -1) return false;
+    const to = idx + delta;
+    if(to < 0 || to >= missions.length) return false;
+    // swap elements
+    const tmp = missions[to];
+    missions[to] = missions[idx];
+    missions[idx] = tmp;
+    // keep selection on the moved mission
+    currentId = id;
+    renderList();
+    renderMarkers();
+    return true;
+  }
+  function moveMissionTo(id, targetIndex){
+    const idx = missions.findIndex(x => x.id === id);
+    if(idx === -1) return false;
+    if(targetIndex < 0) targetIndex = 0;
+    if(targetIndex >= missions.length) targetIndex = missions.length-1;
+    const item = missions.splice(idx,1)[0];
+    missions.splice(targetIndex,0,item);
+    currentId = id;
+    renderList();
+    renderMarkers();
+    return true;
+  }
+
+  /* ---------- gameplay hooks ---------- */
+  let active = false, idx = 0;
+  function startMissions(autoTeleportToStart = true){
+    if(missions.length === 0){ alert('Keine Missionen vorhanden'); return; }
+    idx = 0; active = true;
+    if(autoTeleportToStart && missions[0].start) try{ car.setLatLng([missions[0].start.lat, missions[0].start.lng]); }catch(e){}
+    updateMissionUI();
+    highlightMission(missions[idx]);
+  }
+  function stopMissions(){ active = false; idx = 0; }
+  function updateMissionUI(){ if(!active) return; const m = missions[idx]; if(!m) return; document.getElementById('missionTitleInput').value = m.title || ''; document.getElementById('missionDescInput').value = m.description || ''; }
+  function highlightMission(m){ if(!m || !m.target) return; try{ map.flyTo([m.target.lat, m.target.lng], Math.max(map.getZoom(),17), { duration: 0.9 }); }catch(e){} }
+  function checkProgress(){
+    if(!active) return;
+    const m = missions[idx]; if(!m || !m.target) return;
+    const p = car.getLatLng(); const d = map.distance(p, L.latLng(m.target.lat, m.target.lng));
+    if(d <= (m.radius || 12)){
+      if(m.onReach && m.onReach.score) { score += Number(m.onReach.score) || 0; updateScore(); }
+      try{ if(typeof zzfx === 'function') zzfx(0.3,0,600,0.01,0.06,0.1,1,0,0.1,0,0.12); } catch(e){}
+      idx++;
+      if(idx >= missions.length){
+        active = false;
+        try{ stopFollow(); }catch(e){}
+        try{ if(typeof zzfx === 'function') zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2); }catch(e){}
+        const fo = document.getElementById('finishOverlay');
+        if(fo){ fo.textContent = 'Alle Missionen erledigt 🎉 — Spiel geschafft!'; fo.style.display = 'block'; setTimeout(()=> fo.style.display='none', 2800); } else alert('Alle Missionen erledigt 🎉 — Spiel geschafft!');
+      } else {
+        if(missions[idx].start) try{ car.setLatLng([missions[idx].start.lat, missions[idx].start.lng]); }catch(e){}
+        updateMissionUI();
+        highlightMission(missions[idx]);
+      }
+    }
+  }
+
+  /* ---------- public API ---------- */
+  return {
+    addMission,
+    deleteCurrentMission,
+    selectMission,
+    updateCurrentFromInputs,
+    enterClickMode,
+    renderMarkers,
+    exportMissions,
+    importMissionsFromFile,
+    startMissions,
+    stopMissions,
+    checkProgress,
+    clearAllMarkers,
+    getState: ()=> ({ missions: JSON.parse(JSON.stringify(missions)), currentId, active, idx }),
+    moveMission, moveMissionTo
+  };
+})(); // end missionManager
+
+
+/* wire mission UI */
+document.getElementById('addMission').addEventListener('click', ()=> missionManager.addMission());
+document.getElementById('deleteMission').addEventListener('click', ()=> missionManager.deleteCurrentMission());
+document.getElementById('missionTitleInput').addEventListener('input', ()=> missionManager.updateCurrentFromInputs());
+document.getElementById('missionDescInput').addEventListener('input', ()=> missionManager.updateCurrentFromInputs());
+document.getElementById('setStartBtn').addEventListener('click', ()=> missionManager.enterClickMode('setStart'));
+document.getElementById('setTargetBtn').addEventListener('click', ()=> missionManager.enterClickMode('setTarget'));
+document.getElementById('placeMissionMarkers').addEventListener('click', ()=> missionManager.renderMarkers());
+document.getElementById('clearMissionMarkers').addEventListener('click', ()=> missionManager.clearAllMarkers());
+document.getElementById('exportMissions').addEventListener('click', ()=> missionManager.exportMissions());
+document.getElementById('importMissions').addEventListener('change', (ev)=> { const f = ev.target.files && ev.target.files[0]; if(f) missionManager.importMissionsFromFile(f); });
+
+/* small demo seed so user can test (deletable) */
+(function seedDemo(){
+  const sample = L.polyline([[53.1430,8.2140],[53.1442,8.2150],[53.1455,8.2168]]).addTo(map);
+  addRoad(sample);
+  missionManager.addMission();
+  const s = missionManager.getState ? missionManager.getState() : null;
+  // populate the first mission's target so it's easy to test
+  if(s && s.missions && s.missions.length){
+    const m = s.missions[0];
+    m.title = 'Test: Ende';
+    m.description = 'Fahre zum letzten Punkt.';
+    m.target = { lat:53.1455, lng:8.2168 };
+    missionManager.renderMarkers();
+    missionManager.selectMission(m.id);
+  }
+})();
+
+/* keep keyboard focus sane */
+map.on('click', ()=>{ try{ (document.activeElement||document.body).blur(); } catch(e){} });
+
+</script>
+</body>
+</html>
