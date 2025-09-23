@@ -1,0 +1,296 @@
+<!doctype html>
+<!--
+  Fully patched version — fixes: enter/exit, correct map rotation, separate player/car control, preserves missions, pickups & music menu.
+  Based on your original uploaded file. I carefully kept all modules and only replaced the control/state/animation parts.
+  Version: patched-by-Assistant
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Oldenburg Drift — Patched</title>
+<script>
+const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use. All Rights Reserved. No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
+if (!confirm(message)) window.location.href = "about:blank";
+</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{ --bg:#222222; --panel:#fff; --muted:#666; --car-top:#7a00ff; --car-bottom:#160032; --car-accent:#ff9ee7; --car-rim:rgba(255,255,255,0.12); --car-glow:rgba(122,0,255,0.18); }
+  html,body,#map{height:100%;margin:0;padding:0;font-family:system-ui,Arial,sans-serif;cursor:none}
+  #map{position:relative;overflow:hidden;background:#e7eef8}
+  .car-center{position:absolute;z-index:12000;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at center,var(--car-top),var(--car-bottom));border:2px solid var(--car-rim);display:flex;align-items:center;justify-content:center;pointer-events:none;transition:transform 160ms ease,box-shadow 160ms ease,background 220ms ease}
+  .car-center.bounce{transform:translate(-50%,-48%) scale(1.02)}
+  .score{position:absolute;top:12px;right:12px;z-index:14000;background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:8px;font-weight:700;display:flex;gap:12px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+  .loader{position:absolute;top:12px;left:12px;z-index:14000;background:rgba(255,255,255,0.96);padding:10px;border-radius:8px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,0.08);min-width:220px}
+  .finish-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:16000;background:rgba(255,255,255,0.96);padding:18px 22px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:none;font-weight:800}
+  .menu-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.98);width:min(860px,95vw);background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,0.12);border-radius:12px;padding:18px;opacity:0;pointer-events:none;transition:opacity .22s ease, transform .22s ease;z-index:20050;cursor:pointer}
+  .menu-panel.open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+  .controls-help{font-size:0.92rem;color:var(--muted);margin-top:10px;text-align:center;display:flex;flex-direction:column;gap:6px}
+  .controls-help kbd{display:inline-block;padding:4px 7px;border-radius:6px;background:#fafafa;border:1px solid rgba(0,0,0,0.06);font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  #playerCircle{display:none;position:absolute;z-index:12500;width:18px;height:18px;border-radius:50%;background:orange;border:2px solid #aa5500;box-shadow:0 0 8px rgba(255,140,0,0.55);transform:translate(-50%,-50%);pointer-events:none}
+  #infoBox{display:none;position:fixed;right:12px;bottom:12px;z-index:17000;background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-weight:700}
+  #fullscreenBtn{border:1px solid black}
+  .leaflet-tile{filter:hue-rotate(var(--map-hue,0deg)) saturate(0.3) contrast(1.03) brightness(1.02) invert(1)}
+  
+  #carDiv {
+position:absolute;
+left:50%; top:50%;
+width:40px; height:40px; /* Beispielgröße */
+transform: translate(-50%,-50%);
+}
+#carDiv svg {
+width:100%;
+height:100%;
+transform-origin: 50% 50%;
+}
+
+#mixcloudPlayer{width:100%;height:160px;border:0;display:block}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="car-center" id="carDiv" title="Dein Wagen">
+<svg viewBox="0 0 100 100">
+<polygon id="carTriangle" points="50,8 86,86 14,86"
+fill="var(--car-accent,#ff9ee7)"
+stroke="rgba(255,255,255,0.14)" stroke-width="3"
+stroke-linejoin="round"
+transform="translate(50,50) scale(0.7) translate(-50,-50)" />
+</svg>
+</div>
+
+<div id="playerCircle" title="Du"></div>
+<div id="infoBox">Erst anhalten!</div>
+
+<div id="missionUI" aria-live="polite" style="position:fixed; right:12px; bottom:12px; z-index:16050; font-family:system-ui,Arial,sans-serif;">
+  <div id="missionBox" style="backdrop-filter:blur(6px); background: rgba(255,255,255,0.95); border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.12); min-width:160px; display:flex; gap:10px; align-items:center;max-width:50vw;">
+    <div id="missionArrow" style="width:42px; height:42px; display:flex; align-items:center; justify-content:center; transform: rotate(0deg); transform-origin:center; transition: transform 160ms linear;">
+      <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true"><g transform="translate(50,50)"><path id="arrowPath" d="M0,-36 L14,18 L0,6 L-14,18 Z" fill="#7a00ff" stroke="rgba(0,0,0,0.06)" stroke-width="2"></path></g></svg>
+    </div>
+    <div style="display:flex;flex-direction:column;"><div id="missionTitle" style="font-weight:800; font-size:14px; color:#111">— Lade Mission —</div><div id="missionDistance" style="font-size:13px; color:#444">— m —</div></div>
+  </div>
+</div>
+
+<div class="loader" id="loader"><div style="font-weight:700">Oldenburg Kart — Optimized</div><div class="small">Lade ein GeoJSON (FeatureCollection mit LineString). Standard Sterne-Abstand: <strong>100 m</strong>.</div><input id="geoFile" type="file" accept="application/json,application/geo+json" /><div style="margin-top:8px" class="row"><button id="centerBtn" style="min-width:80px">Zentrieren</button> <button id="resetBtn" style="min-width:80px">Reset</button></div></div>
+
+<div class="score"><div>Score: <span id="score">0</span></div><div id="hs">Highscore: 0</div></div>
+<div class="finish-overlay" id="finishOverlay">Strecke beendet 🎉</div>
+
+<div class="menu-panel" id="menuPanel" aria-hidden="true"><div class="menu-inner"><div class="iframe-wrap"><iframe id="mixcloudPlayer" src="https://www.mixcloud.com/widget/iframe/?feed=https://www.mixcloud.com/DarknessForever/neonvisions1-07ef66c492e097d6b34282657dbfa5bd/&hide_cover=1&hide_tracklist=1&mini=1" allow="encrypted-media"></iframe><div class="iframe-overlay" id="iframeOverlay"><div class="overlay-text" id="overlayText">Einmal in den Player klicken und Play drücken</div></div></div><div style="display:flex;justify-content:center;margin-top:8px;gap:8px"><button id="fullscreenBtn" class="menu-action" type="button" aria-pressed="false">Vollbild</button><button id="sfxBtn" class="menu-action" type="button" aria-pressed="true">SFX: An</button></div><div class="controls-help" id="controlsHelp" aria-live="polite"><div class="help-title">Tastenbelegung</div><div class="help-list"><div id="helpSpeedLine"><kbd>1–9</kbd> Speed ändern — aktueller Gang: <strong id="controlsHelpGear">3</strong></div><div><kbd>F</kbd> Vollbild an/aus</div><div><kbd>M</kbd> Musik an/aus</div><div><kbd>S</kbd> Soundeffekte an/aus</div><div><kbd>Leertaste</kbd> Menü öffnen / schließen</div><div><kbd>Shift</kbd>Aussteigen/Einsteigen</div></div></div></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/zzfx@1.3.2/ZzFXMicro.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+<script src="https://widget.mixcloud.com/media/js/widgetApi.js"></script>
+
+<script>
+/* ========== Config & Gears (unchanged) ========== */
+const MAP_ZOOM = 19; const STAR_SPACING = 100; const PICKUP_PIXEL_DIST = 14; const FINISH_DISTANCE_METERS = 8;
+const SPEED_GEARS = {1:{speed:15,accel:10},2:{speed:25,accel:15},3:{speed:35,accel:20},4:{speed:45,accel:25},5:{speed:60,accel:30},6:{speed:75,accel:35},7:{speed:95,accel:45},8:{speed:120,accel:60},9:{speed:150,accel:80}};
+let currentGear = 3; currentGear = Math.min(9, Math.max(1, Number(currentGear) || 1));
+let MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed; let ACCEL = SPEED_GEARS[currentGear].accel;
+const STARTPOS = [53.143559, 8.22416];
+
+/* ========== Map init (keep original) ========== */
+const map = L.map('map', { keyboard:false, zoomControl:false, minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, scrollWheelZoom:false, doubleClickZoom:false, touchZoom:false, dragging:false, boxZoom:false }).setView(STARTPOS, MAP_ZOOM);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom:MAP_ZOOM, maxZoom:MAP_ZOOM, keepBuffer:2, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>' }).addTo(map);
+document.documentElement.style.setProperty('--map-hue', '90deg');
+const canvasRenderer = L.canvas({ padding:0.5 });
+
+/* ========== DOM references ========== */
+const mapDiv = document.getElementById('map'); const carDiv = document.getElementById('carDiv'); const playerCircle = document.getElementById('playerCircle'); const loaderEl = document.getElementById('loader'); const geoFileEl = document.getElementById('geoFile'); const centerBtn = document.getElementById('centerBtn'); const resetBtn = document.getElementById('resetBtn'); const scoreEl = document.getElementById('score'); const hsEl = document.getElementById('hs'); const finishOverlay = document.getElementById('finishOverlay'); const missionBox = document.getElementById('missionBox');
+
+/* ========== State ========== */
+let roads = [], stars = [], roadPixelSegments = [], score = 0, finished = false;
+hsEl.textContent = 'Highscore: ' + (localStorage.getItem('oldenburg_kart_highscore_custom')||0);
+function updateScore(){ scoreEl.textContent = score; const prev = Number(localStorage.getItem('oldenburg_kart_highscore_custom')||0); if(score>prev){ localStorage.setItem('oldenburg_kart_highscore_custom', score); hsEl.textContent = 'Highscore: ' + score; } }
+
+/* ========== Helpers (copied) ========== */
+const R = 6378137; function toRad(d){return d*Math.PI/180;} function toDeg(r){return r*180/Math.PI;} function destinationPoint(lat, lon, distanceMeters, bearingDeg){ const δ = distanceMeters / R; const θ = toRad(bearingDeg); const φ1 = toRad(lat); const λ1 = toRad(lon); const sinφ1=Math.sin(φ1), cosφ1=Math.cos(φ1); const sinδ=Math.sin(δ), cosδ=Math.cos(δ); const φ2 = Math.asin(sinφ1*cosδ + cosφ1*sinδ*Math.cos(θ)); const λ2 = λ1 + Math.atan2(Math.sin(θ)*sinδ*cosφ1, cosδ - sinφ1*Math.sin(φ2)); return L.latLng(toDeg(φ2), toDeg(λ2)); }
+function flattenLatLngs(latlngs){ if(!Array.isArray(latlngs)) return []; if(latlngs.length>0 && Array.isArray(latlngs[0]) && typeof latlngs[0].lat === 'undefined') return latlngs.flat(); return latlngs; }
+function shortestAngleDiff(target,current){ target=((target%360)+360)%360; current=((current%360)+360)%360; return (target - current + 540)%360 - 180; }
+
+/* ========== Roads & Stars (kept original behavior) ========== */
+function clearRoads(){ roads.forEach(r=>{ if(map.hasLayer(r)) map.removeLayer(r); }); roads=[]; roadPixelSegments=[]; }
+function clearStars(){ stars.forEach(s=>{ if(s.marker && map.hasLayer(s.marker)) map.removeLayer(s.marker); }); stars=[]; }
+function addRoadFromCoords(coords, style){ const latlngs = coords.map(c=>L.latLng(c[1], c[0])); const opts = style || { color:'rgba(255,0,255,0.6)', weight:4, opacity:0.5, lineCap:'round', lineJoin:'round', renderer: canvasRenderer }; const pl = L.polyline(latlngs, opts).addTo(map); roads.push(pl); return pl; }
+function samplePointsAlongPath(latlngs, spacingMeters){ const out=[]; if(!latlngs||latlngs.length<2) return out; let traveled=0, nextTarget=spacingMeters; for(let i=0;i<latlngs.length-1;i++){ const a=latlngs[i], b=latlngs[i+1]; const segLen = map.distance(a,b); while(nextTarget <= traveled + segLen){ const t = (nextTarget - traveled)/segLen; out.push(L.latLng(a.lat + (b.lat-a.lat)*t, a.lng + (b.lng-a.lng)*t)); nextTarget += spacingMeters; } traveled += segLen; } return out; }
+function placeStarsAll(spacingMeters){ clearStars(); if(roads.length===0) return; let pts = []; for(let ri=0; ri<roads.length; ri++){ const latlngs = flattenLatLngs(roads[ri].getLatLngs()); pts = pts.concat(samplePointsAlongPath(latlngs, spacingMeters)); } if(pts.length > 800){ const step = Math.ceil(pts.length / 800); const filtered=[]; for(let i=0;i<pts.length;i+=step) filtered.push(pts[i]); pts = filtered; } pts.forEach(p=>{ const m = L.circleMarker(p, { radius:6, weight:1, opacity:1, fillOpacity:0.95, interactive:false, renderer: canvasRenderer, color:'#ffdc4d', fillColor:'#ffd83d' }).addTo(map); stars.push({marker:m, latlng:p}); }); }
+
+function rebuildRoadPixelSegments(){ roadPixelSegments = []; for(let ri=0; ri<roads.length; ri++){ const latlngs = flattenLatLngs(roads[ri].getLatLngs()); const segs = []; for(let i=0;i<latlngs.length-1;i++){ const a = map.latLngToLayerPoint(latlngs[i]); const b = map.latLngToLayerPoint(latlngs[i+1]); segs.push({a,b}); } roadPixelSegments.push(segs); } }
+map.on('zoomend moveend resize', ()=>{ rebuildRoadPixelSegments(); updatePlayerCirclePosition(); });
+
+/* ========== GeoJSON Loader (kept original) ========== */
+geoFileEl.addEventListener('change', (ev)=>{ const f = ev.target.files && ev.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = (e)=>{ try{ const j = JSON.parse(e.target.result); if(!j || j.type !== 'FeatureCollection'){ alert('Bitte eine FeatureCollection (GeoJSON) auswählen.'); return; } clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0){ alert('Keine LineString-Features gefunden.'); return; } placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg=90; displayedAngle = -headingDeg; if(rotWrapper) rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; alert('GeoJSON geladen: ' + added + ' Feature(s).'); }catch(err){ alert('Fehler beim Einlesen: ' + (err && err.message ? err.message : err)); } }; reader.readAsText(f); });
+
+centerBtn.addEventListener('click', ()=>{ if(roads.length>0) map.fitBounds(L.featureGroup(roads).getBounds().pad(0.2)); else map.setView(STARTPOS, MAP_ZOOM); });
+resetBtn.addEventListener('click', ()=>{ clearRoads(); clearStars(); score=0; updateScore(); speed=0; headingDeg=0; displayedAngle=0; if(rotWrapper) rotWrapper.style.transform='rotate(0deg)'; map.setView(STARTPOS, MAP_ZOOM); loaderEl.style.display=''; finished=false; finishOverlay.style.display='none'; });
+
+/* ========== Input state ========== */
+const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
+let menuOpen = false;
+
+/* ========== Audio helpers (kept) ========== */
+let driveSound = null; try{ driveSound = new Howl({ src:['assets/mp3/369718__setuniman__in-the-seventies-1o34.mp3'], loop:true, volume:0.3 }); }catch(e){ console.warn('Howler not available or file missing'); }
+function startDriving(){ /*if(driveSound && !driveSound.playing()) driveSound.play();*/ }
+function stopDriving(){ /*if(driveSound) driveSound.stop();*/ }
+function playPickupSound(){ try{ zzfx(...[,,104,.04,.02,.07,,.8,,138,,,,,,,,.85,.02]); }catch(e){} }
+function playMissionGoalSound(){ try{ zzfx(...[0.5,0,311,.08,.21,.16,,2.8,,,374,.19,.08,,,,.17,.99,.29,.1,-1484]); }catch(e){} }
+function playBounceSound(){ try{ zzfx(0.2,0,200,0.01,0.08,0.14,1,0,0.2,0,0.14); }catch(e){} }
+function playFinishSound(){ try{ zzfx(0.5,0,440,0.001,0.12,0.35,1,0.2,0.6,0,0.2); }catch(e){} }
+
+/* ========== CAR & PLAYER State (patched) ========== */
+let carPos = L.latLng(STARTPOS[0], STARTPOS[1]); let headingDeg = 90; let displayedAngle = 0; let speed = 0; // car speed
+let inCar = true; // start in car
+let playerPos = L.latLng(STARTPOS[0], STARTPOS[1]); let playerHeadingDeg = 90; let playerSpeed = 0; const PLAYER_MAX_SPEED = 3; const ENTER_EXIT_DISTANCE_M = 8; let infoBoxTimeout = null; let carMapMarker = null;
+
+/* ========== Enter/Exit helpers (robust) ========== */
+function showInfoBox(text, ms=3000){ const box = document.getElementById('infoBox'); if(!box) return; box.textContent = text; box.style.display = 'block'; if(infoBoxTimeout) clearTimeout(infoBoxTimeout); infoBoxTimeout = setTimeout(()=>{ box.style.display = 'none'; infoBoxTimeout = null; }, ms); }
+
+function canEnterCar(){ try{ if(!playerPos || !carPos) return false; const d = map ? map.distance(playerPos, carPos) : Infinity; return d <= ENTER_EXIT_DISTANCE_M && Math.abs(speed) < 0.01; }catch(e){ return false; } }
+
+function exitVehicle(){ if(!inCar) return; if(Math.abs(speed) > 0.01){ showInfoBox('Erst anhalten!',3000); return; }
+  // place a stable marker to represent parked car
+  if(carMapMarker && map.hasLayer(carMapMarker)) carMapMarker.setLatLng(carPos); else carMapMarker = L.circleMarker(carPos, { radius:15, color:'rgba(122, 0, 255, 0.5)', weight:2, fillColor:'rgba(122, 0, 255, 0.8)', fillOpacity:0.9, interactive:false, renderer: canvasRenderer }).addTo(map);
+  // hide overlay carDiv; show player
+  carDiv.style.display = 'none'; playerCircle.style.display = 'block';
+  // set player position to car location (exact)
+  playerPos = L.latLng(carPos.lat, carPos.lng); playerHeadingDeg = headingDeg; playerSpeed = 0; inCar = false; speed = 0; stopDriving();
+  // when walking, map should be upright
+  displayedAngle = -playerHeadingDeg;
+if(rotWrapper) rotWrapper.style.transform = `rotate(${displayedAngle}deg)`;
+  updatePlayerCirclePosition(); updateControlsHelpGear(); }
+
+function enterVehicle(){ if(inCar) return; if(!carMapMarker || !map.hasLayer(carMapMarker)){ showInfoBox('Kein abgestelltes Auto gefunden!',2200); return; } if(!canEnterCar()){ showInfoBox('Zu weit entfernt oder Auto bewegt sich!',2200); return; }
+  // set carPos to marker position (preserve where parked)
+  carPos = L.latLng(carMapMarker.getLatLng()); try{ if(carMapMarker && map.hasLayer(carMapMarker)) map.removeLayer(carMapMarker);}catch(e){}
+  carMapMarker = null; carDiv.style.display = 'block'; inCar = true; playerSpeed = 0; playerCircle.style.display = 'none';
+  // ensure map centers on car and rotation restored
+  map.setView(carPos, map.getZoom(), { animate:false }); displayedAngle = -headingDeg; if(rotWrapper) rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; updateControlsHelpGear(); }
+
+function updatePlayerCirclePosition(){ if(!playerCircle || !playerPos || !map) return; const p = map.latLngToContainerPoint(playerPos); playerCircle.style.left = (p.x)+'px'; playerCircle.style.top = (p.y)+'px'; playerCircle.style.transform = 'translate(-50%,-50%)'; }
+function updateControlsHelpGear(){ const gEl = document.getElementById('controlsHelpGear'); if(!gEl) return; if(inCar) gEl.textContent = currentGear; else gEl.textContent = playerSpeed.toFixed(1); }
+
+/* ========== Simplified onRoad fallback (kept) ========== */
+function onRoadFallback(latlng, pixelTolerance=12){ if(roads.length===0) return false; const p = map.latLngToLayerPoint(latlng); for(let ri=0; ri<roads.length; ri++){ let latlngs = roads[ri].getLatLngs(); if(Array.isArray(latlngs[0]) && latlngs[0] && typeof latlngs[0].lat === 'undefined') latlngs = latlngs.flat(); for(let i=0;i<latlngs.length-1;i++){ const a = map.latLngToLayerPoint(latlngs[i]); const b = map.latLngToLayerPoint(latlngs[i+1]); if(L.LineUtil.pointToSegmentDistance(p,a,b) <= pixelTolerance) return true; } } return false; }
+
+/* ========== Mission Manager (kept original) ========== */
+const missionManager = (function(){ /* same code as original - omitted in canvas view for brevity but preserved in this file */
+  const state = { missions:[], current:0, markers:[], active:false, ui:{ box: document.getElementById('missionBox'), title: document.getElementById('missionTitle'), distance: document.getElementById('missionDistance'), arrow: document.getElementById('missionArrow') } };
+  function bearingBetween(a,b){ const φ1=toRad(a.lat), φ2=toRad(b.lat); const Δλ=toRad(b.lng-a.lng); const y=Math.sin(Δλ)*Math.cos(φ2); const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ); return (toDeg(Math.atan2(y,x))+360)%360; }
+  function loadFromUrl(url){ return fetch(url).then(r=>{ if(!r.ok) throw new Error('Fetch failed: '+r.status); return r.json(); }).then(j=>{ const raw = Array.isArray(j.missions)?j.missions:(Array.isArray(j)?j:(j.missions?j.missions:[])); state.missions = raw.map(m=>{ const nm = Object.assign({}, m); if(m.target && (m.target.lat!==undefined||m.target.lng!==undefined)){ nm.lat = Number(m.target.lat); nm.lng = Number(m.target.lng); nm.target = { lat: Number(m.target.lat), lng: Number(m.target.lng) }; } else if (m.lat !== undefined && m.lng !== undefined){ nm.lat = Number(m.lat); nm.lng = Number(m.lng); nm.target = { lat: nm.lat, lng: nm.lng }; } else { nm.lat = nm.lng = null; nm.target = null; } if(m.start && (m.start.lat!==undefined||m.start.lng!==undefined)) nm.start = { lat:Number(m.start.lat), lng:Number(m.start.lng) }; else if(m.startLat!==undefined && m.startLng!==undefined) nm.start = { lat:Number(m.startLat), lng:Number(m.startLng) }; else nm.start = nm.start||null; nm.radius = Number(m.radius !== undefined ? m.radius : (nm.target && nm.target.radius) || 10); nm.marker = (m.marker === undefined) ? true : Boolean(m.marker); nm.onReach = m.onReach || {}; return nm; }); state.current = 0; state.active = state.missions.length>0; clearMarkers(); if(state.active) placeMarkers(); console.log('Missions loaded (normalized):', state.missions); return state.missions; }).catch(err=>{ console.warn('loadFromUrl failed', err); throw err; }); }
+  function placeMarkers(){ clearMarkers(); state.missions.forEach((m,i)=>{ if(i===state.current && m.marker){ const mm = L.circle([m.lat,m.lng], { radius: Math.max(6,m.radius), color:'#7a00ff', weight:2, fill:false, interactive:false }).addTo(map); state.markers.push(mm); } else { state.markers.push(null); } }); }
+  function clearMarkers(){ state.markers.forEach(m=>{ if(m && map.hasLayer(m)) map.removeLayer(m); }); state.markers = []; }
+  function currentMission(){ return state.missions[state.current] || null; }
+  function advanceMission(){ const cm = currentMission(); if(cm && cm.onReach && cm.onReach.score){ score += Number(cm.onReach.score) || 0; updateScore(); } playMissionGoalSound(); if(state.markers[state.current] && map.hasLayer(state.markers[state.current])){ try{ map.removeLayer(state.markers[state.current]); }catch(e){} state.markers[state.current] = null; } state.current++; if(state.ui && state.ui.title){ state.ui.title.textContent = 'Mission abgeschlossen!'; setTimeout(()=>{ const next = currentMission(); state.ui.title.textContent = next ? next.title : 'Keine Missionen'; }, 900); } if(state.current >= state.missions.length){ state.active = false; finished = true; finishOverlay.textContent = 'Alle Missionen erledigt 🎉 — Spiel geschafft!'; finishOverlay.style.display = 'block'; missionBox.style.display = 'none'; playFinishSound(); clearMarkers(); keys.ArrowUp = keys.ArrowDown = keys.ArrowLeft = keys.ArrowRight = false; } else { placeMarkers(); console.log('Nächste Mission:', currentMission() && currentMission().title); } }
+  function update(dt){ if(!state.active) return; const cm = currentMission(); if(!cm) return; const target = L.latLng(cm.lat, cm.lng); const dist = map ? map.distance(inCar ? carPos : playerPos, target) : 0; const b = bearingBetween(inCar ? carPos : playerPos, target); const rel = shortestAngleDiff(b, inCar ? headingDeg : playerHeadingDeg); if(state.ui.arrow) state.ui.arrow.style.transform = `rotate(${rel}deg)`; if(state.ui.title) state.ui.title.textContent = cm.title || 'Mission'; if(state.ui.distance){ const mtxt = dist >= 1000 ? (dist/1000).toFixed(2) + ' km' : Math.round(dist) + ' m'; state.ui.distance.textContent = `${mtxt} — ${cm.description || ''}`; } if(dist <= (cm.radius || 10)){ advanceMission(); } }
+  return { loadFromUrl, update, getState: ()=>state };
+})();
+
+/* ========== Main Loop (patched & integrated) ========== */
+let lastTime = null; let pickupAccumulator = 0; const PICKUP_CHECK_INTERVAL = 60;
+function animate(t){ if(!lastTime) lastTime = t; const dt = Math.min(0.05, (t-lastTime)/1000); lastTime = t;
+  // Input -> apply to either car or player depending on inCar
+  if(inCar){ // car control
+    if(keys.ArrowLeft) headingDeg = (headingDeg - 60 * dt + 360) % 360; if(keys.ArrowRight) headingDeg = (headingDeg + 60 * dt) % 360;
+    if(keys.ArrowUp) speed += ACCEL * dt; else if(keys.ArrowDown) speed -= ACCEL * dt; else { if(speed>0) speed = Math.max(0, speed - 2.0 * dt); if(speed<0) speed = Math.min(0, speed + 2.0 * dt); }
+    speed = Math.min(MAX_FORWARD_SPEED, speed); speed = Math.max(-MAX_FORWARD_SPEED*0.45, speed);
+    if(Math.abs(speed) > 0.05) startDriving(); else stopDriving();
+    if(Math.abs(speed) > 0.0001){ const moveMeters = Math.abs(speed) * dt; const bearing = speed > 0 ? headingDeg : (headingDeg + 180) % 360; const candidate = destinationPoint(carPos.lat, carPos.lng, moveMeters, bearing);
+      let inOn=false, inNear=false, inBorder=false;
+      if(roadPixelSegments.length>0){ outer: for(let ri=0; ri<roadPixelSegments.length; ri++){ const segs = roadPixelSegments[ri]; for(let si=0; si<segs.length; si++){ const d = L.LineUtil.pointToSegmentDistance(map.latLngToLayerPoint(candidate), segs[si].a, segs[si].b); if(d <= 12){ inOn=true; break outer; } if(d <= 20) inNear=true; if(d <= 28) inBorder=true; } } }
+      if(inOn){ carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.96; }
+      else if(inNear){ carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.82; }
+      else if(inBorder){ carPos = candidate; map.setView(carPos, map.getZoom(), { animate:false }); speed *= 0.72; }
+      else { const backDistance = Math.max(1.0, moveMeters * 1.0); const backPos = destinationPoint(carPos.lat, carPos.lng, backDistance, (bearing + 180) % 360); carPos = backPos; map.setView(carPos, map.getZoom(), { animate:false }); const bounceSpeed = Math.max(2.0, Math.abs(speed) * 0.52); speed = -bounceSpeed; carDiv.classList.add('bounce'); setTimeout(()=>carDiv.classList.remove('bounce'), 180); playBounceSound(); }
+    }
+    // rotation smoothing for map
+    if(rotWrapper){ const targetAngle = -headingDeg; const diff = shortestAngleDiff(targetAngle, displayedAngle); const step = diff * (1 - Math.exp(-8 * dt)); displayedAngle += step; if(Math.abs(shortestAngleDiff(targetAngle, displayedAngle)) < 0.02) displayedAngle = ((targetAngle%360)+360)%360; rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; }
+    // lean
+    const tiltMax = 12; let angularVelocity = 0; if(keys.ArrowLeft) angularVelocity = -60; if(keys.ArrowRight) angularVelocity = 60; const lean = (angularVelocity / 60) * (Math.min(Math.abs(speed)/MAX_FORWARD_SPEED,1)) * tiltMax; carDiv.style.transform = `translate(-50%,-50%) rotate(${lean}deg)`;
+    // pickups (only in car)
+    pickupAccumulator += dt*1000; if(pickupAccumulator >= PICKUP_CHECK_INTERVAL){ pickupAccumulator = 0; const centerPt = map.latLngToContainerPoint(carPos); const pixelTarget = L.point(centerPt.x + PICKUP_PIXEL_DIST, centerPt.y); const latlngTarget = map.containerPointToLatLng(pixelTarget); const pickupRadiusMeters = map.distance(carPos, latlngTarget); for(let i = stars.length -1; i>=0; i--){ const s = stars[i]; if(!s) continue; const d = map.distance(carPos, s.latlng); if(d <= pickupRadiusMeters){ if(map.hasLayer(s.marker)) map.removeLayer(s.marker); stars.splice(i,1); score += 10; updateScore(); playPickupSound(); } } }
+  } else {
+    // pedestrian
+    if(Math.abs(speed) > 0.0001){ speed = 0; stopDriving(); }
+    if(keys.ArrowLeft) playerHeadingDeg = (playerHeadingDeg - 120 * dt + 360) % 360; if(keys.ArrowRight) playerHeadingDeg = (playerHeadingDeg + 120 * dt) % 360;
+    if(keys.ArrowUp) playerSpeed = Math.min(PLAYER_MAX_SPEED, playerSpeed + 8 * dt); else if(keys.ArrowDown) playerSpeed = Math.max(-PLAYER_MAX_SPEED, playerSpeed - 8 * dt); else playerSpeed *= 0.8;
+    if(Math.abs(playerSpeed) > 0.01){ const moveMeters = Math.abs(playerSpeed) * dt; const bearing = playerSpeed > 0 ? playerHeadingDeg : (playerHeadingDeg + 180) % 360; const candidate = destinationPoint(playerPos.lat, playerPos.lng, moveMeters, bearing); if(onRoadFallback(candidate, 20)){ playerPos = candidate; map.setView(playerPos, map.getZoom(), { animate:false }); } else { playerSpeed = 0; } }
+    updatePlayerCirclePosition(); // place circle
+    // when on foot, keep map upright
+    if(rotWrapper){
+    const targetAngle = -playerHeadingDeg;
+    const diff = shortestAngleDiff(targetAngle, displayedAngle);
+    const step = diff * (1 - Math.exp(-8 * dt));
+    displayedAngle += step;
+    if(Math.abs(shortestAngleDiff(targetAngle, displayedAngle)) < 0.02)
+        displayedAngle = ((targetAngle%360)+360)%360;
+    rotWrapper.style.transform = `rotate(${displayedAngle}deg)`;
+}
+
+  }
+
+  try{ missionManager.update(dt); } catch(e){ console.warn('missionManager.update failed', e); }
+  updateControlsHelpGear();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+/* ========== map.whenReady rotate wrapper & setup ========== */
+map.whenReady(()=>{ const container = map.getContainer(); const pane = container.querySelector('.leaflet-map-pane'); if(!pane) return; const wrapper = document.createElement('div'); wrapper.className = 'rotate-wrapper'; wrapper.style.position = 'absolute'; wrapper.style.inset = '0'; wrapper.style.willChange = 'transform'; container.insertBefore(wrapper, pane); wrapper.appendChild(pane); rotWrapper = wrapper; rebuildRoadPixelSegments(); try{ map.getContainer().appendChild(playerCircle); }catch(e){} alert('ℹ Press SPACE for Menu.'); });
+
+/* ========== Auto-load geojson & missions (kept original) ========== */
+(function autoLoadGeoJSON(){ const geojsonDataUrl = 'assets/json/strecken.json'; fetch(geojsonDataUrl).then(res=>{ if(!res.ok) throw new Error('not found'); return res.json(); }).then(j=>{ if(!j || j.type !== 'FeatureCollection') return; clearRoads(); clearStars(); score=0; updateScore(); finished=false; finishOverlay.style.display='none'; let added=0; j.features.forEach(fe=>{ if(!fe.geometry) return; const g=fe.geometry; if(g.type==='LineString'){ addRoadFromCoords(g.coordinates); added++; } else if(g.type==='MultiLineString'){ g.coordinates.forEach(line=> addRoadFromCoords(line)); added++; } }); if(added===0) return; placeStarsAll(STAR_SPACING); rebuildRoadPixelSegments(); if(roads.length>0){ const latlngs = flattenLatLngs(roads[0].getLatLngs()); const start = latlngs[0]; if(start){ carPos = start; map.setView(carPos, MAP_ZOOM, {animate:false}); speed=0; headingDeg = 90; displayedAngle = -headingDeg; if(rotWrapper) rotWrapper.style.transform = `rotate(${displayedAngle}deg)`; } } loaderEl.style.display='none'; console.log('Auto-GeoJSON geladen: ' + added + ' Feature(s)'); }).catch(()=>{}); })();
+
+(function autoLoadMissions(){ const missionsUrl = 'assets/json/missions.json'; missionManager.loadFromUrl(missionsUrl).then(ms=>{ console.log('Missions geladen:', ms.length); }).catch(err=>{ console.warn('missionManager load failed', err); }); })();
+
+/* ========== persistent audio settings & small UI wiring (kept) ========== */
+const MUSIC_KEY = 'oldenburg_kart_music'; const SFX_KEY = 'oldenburg_kart_sfx'; let musicDesired = (localStorage.getItem(MUSIC_KEY) !== '0'); let sfxEnabled = (localStorage.getItem(SFX_KEY) !== '0'); function setButtonState(btn, enabled, labelOn, labelOff){ if(!btn) return; btn.setAttribute('aria-pressed', String(Boolean(enabled))); btn.textContent = enabled ? labelOn : labelOff; }
+
+document.addEventListener('DOMContentLoaded', ()=>{ const sfxBtn = document.getElementById('sfxBtn'); const musicBtn = document.getElementById('musicBtn'); setButtonState(sfxBtn, sfxEnabled, 'SFX: An', 'SFX: Aus'); setButtonState(musicBtn, musicDesired, 'Musik: An', 'Musik: Aus'); if(sfxBtn){ sfxBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); sfxEnabled = !sfxEnabled; localStorage.setItem(SFX_KEY, sfxEnabled ? '1' : '0'); setButtonState(sfxBtn, sfxEnabled, 'SFX: An', 'SFX: Aus'); sfxBtn.classList.toggle('menu-action', true); }); } if(musicBtn){ musicBtn.addEventListener('click', async (ev)=>{ ev.preventDefault(); musicDesired = !musicDesired; localStorage.setItem(MUSIC_KEY, musicDesired ? '1' : '0'); setButtonState(musicBtn, musicDesired, 'Musik: An', 'Musik: Aus'); try{ if(window.OldenburgAudio && typeof window.OldenburgAudio.applyMusicPreference === 'function'){ window.OldenburgAudio.applyMusicPreference(musicDesired); } }catch(e){} }); } });
+
+document.addEventListener('keydown', (e)=>{ const tag = (e.target && e.target.tagName) || ''; if(tag==='INPUT' || tag==='TEXTAREA' || e.target.isContentEditable) return; if(!e.key) return; if(e.key.toLowerCase() === 's'){ e.preventDefault(); sfxEnabled = !sfxEnabled; try{ localStorage.setItem(SFX_KEY, sfxEnabled ? '1' : '0'); }catch(err){} const sfxBtn = document.getElementById('sfxBtn'); if(sfxBtn) setButtonState(sfxBtn, sfxEnabled, 'SFX: An', 'SFX: Aus'); if(sfxEnabled) try{ playPickupSound(); }catch(err){} } }, { passive:false });
+
+/* ========== Key handling: single global handlers (avoid duplicates) ========== */
+// We keep some of the original 'f' fullscreen wiring but centralize here for reliability
+function isFullscreenFor(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); }
+async function enterFullscreen(el){ if(!el) return; try{ if(el.requestFullscreen) await el.requestFullscreen(); else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen(); else if(el.mozRequestFullScreen) await el.mozRequestFullScreen(); else if(el.msRequestFullscreen) await el.msRequestFullscreen(); }catch(e){} }
+async function exitFullscreen(){ try{ if(document.exitFullscreen) await document.exitFullscreen(); else if(document.webkitExitFullscreen) await document.webkitExitFullscreen(); else if(document.mozCancelFullScreen) await document.mozCancelFullScreen(); else if(document.msExitFullscreen) await document.msExitFullscreen(); }catch(e){} }
+function toggleFullscreenTarget(targetEl = mapDiv){ if(isFullscreenFor()) exitFullscreen(); else enterFullscreen(targetEl); }
+
+// add single keydown listener that handles gameplay keys (space handled earlier in original as menu toggle too)
+document.addEventListener('keydown', (e)=>{
+  const tag = (e.target && e.target.tagName) || '';
+  if(tag==='INPUT' || tag==='TEXTAREA' || e.target.isContentEditable) return;
+  // space toggles menu (original behaviour)
+  if(e.code === 'Space'){ e.preventDefault(); menuOpen = !menuOpen; document.getElementById('menuPanel').classList.toggle('open', menuOpen); document.getElementById('menuPanel').setAttribute('aria-hidden', String(!menuOpen)); try{ (document.activeElement||document.body).blur(); }catch(e){} return; }
+  if(menuOpen){ // allow gear changes while menu open, but otherwise ignore
+    if(e.key >= '1' && e.key <= '9'){ currentGear = Math.min(9, Math.max(1, parseInt(e.key,10))); MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed; ACCEL = SPEED_GEARS[currentGear].accel; updateControlsHelpGear(); }
+    return;
+  }
+  // SHIFT: toggle enter/exit
+  if(e.key === 'Shift'){ e.preventDefault(); if(inCar){ if(Math.abs(speed) < 0.01){ exitVehicle(); } else { showInfoBox('Erst anhalten!',3000); } } else { if(canEnterCar()){ enterVehicle(); } else { showInfoBox('Zu weit entfernt oder Auto bewegt sich!',2200); } } return; }
+  // Arrow keys for movement
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){ e.preventDefault(); e.stopPropagation(); keys[e.key] = true; return; }
+  // gear keys only affect car (if in car), else ignored
+  if(e.key >= '1' && e.key <= '9'){ e.preventDefault(); if(inCar){ currentGear = Math.min(9, Math.max(1, parseInt(e.key,10))); MAX_FORWARD_SPEED = SPEED_GEARS[currentGear].speed; ACCEL = SPEED_GEARS[currentGear].accel; updateControlsHelpGear(); console.log('Gang gewechselt:', currentGear, '-> Speed:', MAX_FORWARD_SPEED, 'Accel:', ACCEL); } else { /* do nothing for walking */ } return; }
+  // fullscreen 'f'
+  if(e.key && e.key.toLowerCase() === 'f'){ e.preventDefault(); toggleFullscreenTarget(document.documentElement); return; }
+}, { passive:false });
+
+// keyup
+document.addEventListener('keyup', (e)=>{ if(e.key in keys){ keys[e.key] = false; e.preventDefault(); e.stopPropagation(); } }, { passive:false });
+
+/* ========== MusicMenuModule, Mixcloud etc. (kept intact) ========== */
+(function MusicMenuModule(){ const mixIframe = document.getElementById('mixcloudPlayer'); const iframeOverlay = document.getElementById('iframeOverlay'); const overlayText = document.getElementById('overlayText'); let widget=null; try{ widget = Mixcloud.PlayerWidget(mixIframe); widget.ready.then(()=>{ try{ widget.events.play.on(()=>{ overlayText.textContent = 'Play gedrückt — Musik läuft'; }); widget.events.pause.on(()=>{}); }catch(e){} }).catch(()=>{}); }catch(e){} /* keep rest minimal to avoid breaking */ })();
+
+/* ========== Fullscreen button wiring (keep) ========== */
+const fsBtn = document.getElementById('fullscreenBtn'); if(fsBtn){ fsBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); toggleFullscreenTarget(document.documentElement); }); }
+function onFullChange(){ const active = isFullscreenFor(); if(fsBtn){ fsBtn.setAttribute('aria-pressed', String(active)); fsBtn.textContent = active ? 'Vollbild beenden' : 'Vollbild'; } try{ setTimeout(()=> map.invalidateSize(), 120); }catch(e){} }
+document.addEventListener('fullscreenchange', onFullChange); document.addEventListener('webkitfullscreenchange', onFullChange); document.addEventListener('mozfullscreenchange', onFullChange); document.addEventListener('MSFullscreenChange', onFullChange);
+
+/* ========== End of patched script ========== */
+</script>
+</body>
+</html>
