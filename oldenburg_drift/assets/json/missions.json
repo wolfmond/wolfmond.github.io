@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "created": "2025-09-23T00:46:04.553Z"
+  },
+  "missions": [
+    {
+      "id": "ms_mfvtp0vr4f4",
+      "title": "Start",
+      "description": "Fahre zur DHL-Packstation am Bahnhof und hole ein Paket ab.",
+      "start": {
+        "lat": 53.1434305374841,
+        "lng": 8.214608430862429
+      },
+      "target": {
+        "lat": 53.14384239502062,
+        "lng": 8.218991160392763
+      },
+      "radius": 12,
+      "onReach": {
+        "score": 100
+      },
+      "marker": true
+    },
+    {
+      "id": "ms_mfvtylpg4ek",
+      "title": "Zweite",
+      "description": "Du hast das Paket. Bringe es zum Carsharing.",
+      "start": {
+        "lat": 53.14384078620981,
+        "lng": 8.218993842601778
+      },
+      "target": {
+        "lat": 53.14306211470062,
+        "lng": 8.223931789398195
+      },
+      "radius": 12,
+      "onReach": {
+        "score": 100
+      },
+      "marker": true
+    }
+  ]
+}
