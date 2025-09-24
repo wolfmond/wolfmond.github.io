@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-24_13.44
+Current Version: 2025-09-24_13.48
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -585,7 +585,7 @@ function loadQuests(path = 'quests.json'){
     const NUM_QUESTS = 3;
 
     // --- LIMITIEREN auf die ersten 8 Einträge VOR dem Shufflen ---
-    const limited = Array.isArray(data) ? data.slice(0, 10) : [];
+    const limited = Array.isArray(data) ? data.slice(0, 24) : [];
 
     // shuffleArray erwartet ein Array; hier wird das gekürzte Array gemischt
     const shuffled = shuffleArray(limited.slice());
