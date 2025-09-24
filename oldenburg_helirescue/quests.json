@@ -1,0 +1,1402 @@
+[
+  {
+    "text": "Schwerer Verkehrsunfall auf der A28 nahe der Abfahrt Oldenburg-Ost; mehrere eingeklemmte Personen.",
+    "location": [
+      53.098123,
+      8.289799
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Arbeitsunfall in der Chemiefabrik mit Herzstillstand und lebensbedrohlicher Rauchinhalation.",
+    "location": [
+      53.161534,
+      8.254286
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Sturz eines Bauarbeiters von einem Krangerüst in der Innenstadt; schwere Schädelverletzung.",
+    "location": [
+      53.138984,
+      8.214533
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Herzinfarkt bei einer Marathonläuferin im Schlossgarten; High-Priority Transport.",
+    "location": [
+      53.132785,
+      8.210886
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schiffsunfall im Hafen mit unterkühltem, bewusstlosem Matrosen.",
+    "location": [
+      53.141453,
+      8.238244
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Mehrfachverletzte bei Brand in einem Mehrfamilienhaus in Kreyenbrück.",
+    "location": [
+      53.105829,
+      8.208592
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Motorradunfall auf der Oldenburger Straße mit offener Fraktur.",
+    "location": [
+      53.23122520682865,
+      8.207677671908865
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Bewusstloser Taucher im Kanal mit Verdacht auf Dekompressionsunfall.",
+    "location": [
+      53.129488,
+      8.21493
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Massenkarambolage bei Nebel auf der B211; mehrere Schwerverletzte.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Stromschlag in einer Werkstatt; Patient mit schweren Verbrennungen und Herzrhythmusstörungen.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schweres Asthma beim Kind auf einem abgelegenen Bauernhof; schneller Lufttransport nötig.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Sturz von einer Pferdekutsche bei Pferderennenveranstaltung auf dem Fliegerdeich.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Akute Blutung nach Schussverletzung (fiktiv) auf einem Industriegelände — sofortiger Transport.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Chemikalienfreisetzung in einer Lagerhalle; Patient mit Inhalationsschäden.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Hochbetagte Person mit Schlaganfall in einem weit abgelegenen Pflegeheim.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Helikoptertransfer eines Neugeborenen mit angeborener Herzfehlbildung ins Spezialklinikum.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Massenpanik bei Konzert auf dem Freigelände; mehrere Traumata und Schnittverletzungen.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Einsturz einer Lagerhalle mit Verschütteten in Wechloy.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Fahrradsturz am Haarenufer mit spinaler Verletzung vermutet.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Binnenschiff kollidiert mit Brückenpfeiler; Besatzungsmitglied eingeklemmt.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Gasaustritt in Wohnhaus; mehrere Anwohner bewusstlos.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Brandausbruch in Pflegeheim; Evakuierung per Hubschrauber für kritisch Kranke.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Verschüttung in einem Silo; Arbeiter atmet giftige Stäube ein.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Lebensbedrohliche allergische Reaktion (anaphylaktischer Schock) in einer ländlichen Gemeinde.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Hochrisiko-Geburt auf einem Frachtschiff im Hafen — schneller Lufttransport nötig.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Extremer Hitzschlag bei Arbeiten auf einer Deponie; Kreislaufkollaps.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Schwere Verbrennungen nach Verpuffung in einer Biogasanlage.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Gestochenes Kind mit anaphylaktischem Schock bei einem Ausflug im Eversten Holz.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Person in Lebensgefahr nach Sturz vom Deich bei starkem Seegang (Küstengebiet Anbindung).",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Schusswechsel (fiktiv) mit mehreren Verletzten bei einer Straßenschlacht — Luftunterstützung für schnellen Transport.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schwere Beinverletzung nach Fußgänger-gegen-Bus-Unfall am ZOB.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Bewusstloser Wanderer mit Unterkühlung im Schlosspark bei Nacht.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Herzrhythmusstörung nach Elektrounfall auf einem Schiff im Küstenhafen.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schweres Schädel-Hirn-Trauma nach Sprung in seichtes Wasser am Hafenbecken.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Vergiftung durch Ingestion von Industriechemikalien in einem Lagerbetrieb.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Lebensbedrohliche innere Blutung nach Sturz in einem Steinbruch nahe Oldenburg.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schlaganfall bei einem Altenheim-Patienten auf einem abgelegenen Gehöft.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Akute Intoxikation nach Drogenüberdosis mit Atemstillstand in der Innenstadt.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Panikattacke mit Herzstillstand bei einem Großevent im Weser-Ems-Hallen-Areal.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Gefahrgutunfall beim Bahntransport durch Oldenburg mit Rauchentwicklung; mehrere Verletzte.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Heli-Evakuierung nach Hochwasser: isolierte Siedlung nicht erreichbar per Straße.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schwer verletzter Kletterer an einem Industriekran im Betriebsgelände.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Atemstillstand nach Ertrinkungsunfall in einem Seitenarm der Hunte.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Multiple Verletzte nach Explosion in Schrotthandelanlage.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Akuter Herzinfarkt auf dem Messegelände während einer Ausstellung.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Stoß mit landwirtschaftlichem Gerät auf einem abgelegenen Hof; starke Blutung.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Landeplatz-Notfall: Patient bewusstlos auf Dachterrasse eines Parkhauses, bodengebunden schwer erreichbar.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Intoxikation durch CO-Vergiftung in einer Tiefgarage; mehrere Menschen betroffen.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Niedergeschlagener Bauarbeiter in einer Tunnelbaustelle mit Lebensgefahr.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Schweres Schädeltrauma nach Gewaltvorfall (fiktiv) in einer Diskothek.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Mutter mit Komplikationen in der Spätschwangerschaft auf einer Offshore-Versorgungsanlage im Hafen.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Brodelnder Brand in einer Autowerkstatt; Eingeschlossene mit Rauchgasintoxikation.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Mehrere Schwerverletzte nach Stallbrand auf einem Reiterhof.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Akuter Nierenversagen eines Patienten in einer abgelegenen Ferienanlage — schneller Transport nötig.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Person unter eingestürztem Dach nach Unwetter in einer Außenstelle.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Sturz vom Fahrrad während einer Schulklasse-Exkursion mit Bewusstseinsverlust.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Kreislaufkollaps nach extremer Unterkühlung bei einer Wattwanderung (Anbindung an Insel-/Küstenbereiche).",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Sepsis-Verdacht mit rascher Verschlechterung in einem Landarztpraxis-Bezirk.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Bewusstloser Arbeiter in einer Kühlhalle mit Hypothermie.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schwere Augenverletzung nach Chemikalienkontakt in einer Lackiererei.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Panzerungsspiel (fiktiv) — Explosion bei Industrietestgelände mit mehreren Schwerverletzten.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Person mit offener Bauchverletzung nach Sturz in einer Baustelle.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Mehrfachverletzte nach Zusammenstoß zweier Reisebusse vor dem Hauptbahnhof.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Kreislaufkollaps bei Großveranstaltung am Pferdemarkt wegen Überhitzung.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "LKW-Fahrer mit Herzstillstand auf einer Brücke — Straßenblockade, Heli bevorzugt.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Verschüttung in Baugrube; potenziell Atemnot und Frakturen.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Bewusstloser nach Stromunfall an einer Bahnanlage.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Akute Vergiftung eines Kindes nach Aufnahme unbekannter Substanz in einem Gartenverein.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Sturz von einer Windkraftanlage im Außenbereich von Oldenburg.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Atemstillstand nach Rauchgasinhalation bei Lagerhallenbrand im Gewerbepark.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schwere Beinverletzung nach Sturz beim Mountainbiken im Umland.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Traumatische Amputation nach Unfall mit Bandsäge in Schreinerei.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Zusammenbruch mehrerer Arbeiter bei Hitzschlag in einer Asphaltmischanlage.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Tiefgreifende Unterkühlung eines Seglers, der nahe dem Hafen gekentert ist.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Vergiftung durch Pilzaufnahme bei einer Wandergruppe im Naherholungsgebiet.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Personen nach Massenpanik auf Fußgängerbrücke mit Crush-Injuries.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Sturz eines Kindes von einer Schleuse im Kanalbereich.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Patient mit schwerer Verbrennung nach Grill-Explosionsunfall auf einer Werft.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Akuter Herzinfarkt bei Fußballspiel in einem Amateurstadion mit schlechter Bodenanbindung.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Person von Zug erfasst; ausgeprägte Polytraumen nahe Bahnhofsvorplatz.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Intoxikation nach Gasausstrom in einer Schule; Schüler mit Atemnot.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Fahrradunfall bei Nacht auf der Umgehungsstraße mit Blutverlust.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Person bewusstlos in abgelegener Bootshütte am Hafenarm; schlechter Straßenzugang.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Arbeitsunfall in Sägewerk mit Kopfverletzung und Blutverlust.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Lebensbedrohliche innere Verletzung nach Sturz von Stallbalken auf Hof.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Patient mit akuter Vergiftung nach Inhalation von Lösungsmitteln in Lackfabrik.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Sturz eines Kletters von der Fassade beim Fassadenreinigungsauftrag.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Mehrere Verletzte nach massiver Überflutung einer Tiefgarage; Evakuierung per Luft.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Person in kritischem Zustand nach Stromschlag an 110-kV-Anlage im Außenbereich.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Verdacht auf Lungenembolie bei Joggerin in einem abgelegenen Naturschutzgebiet.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Sportunfall mit Wirbelsäulenverletzung in einer Schulturnhalle außerhalb Ortskern.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Akute Blutung nach Explosion einer Gasflasche bei Schweißarbeiten in einem Hinterhof.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Mehrere Betroffene nach Zusammenbruch bei Firmenfeier durch unspezifische Vergiftung.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Patient mit schwerer Atemnot bei Industriebrand in Gewerbegebiet Küstenstraße.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Hochrisiko-Geburt in naturferner Ferienwohnung entlang eines Seitenarms.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  },
+  {
+    "text": "Sturz in eine Schleuse mit langen Rettungswegen und kritischem Zustand.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Klinikum Oldenburg AöR",
+      "location": [
+        53.11215837380228,
+        8.215650517991655
+      ]
+    }
+  },
+  {
+    "text": "Lebensbedrohlicher Blutdruckentgleisung (Hypertensive Krise) bei älterem Patienten auf abgelegener Siedlung.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Schwerer Schädeltrauma nach Auseinandersetzung (fiktiv) in einem Park bei Nacht.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital Oldenburg",
+      "location": [
+        53.144026,
+        8.211016
+      ]
+    }
+  },
+  {
+    "text": "Eingeklemmte Person nach Unfall mit landwirtschaftlichem Anhänger auf Feldweg.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Evangelisches Krankenhaus",
+      "location": [
+        53.142950679739,
+        8.204456652779054
+      ]
+    }
+  },
+  {
+    "text": "Massenanfall von Verletzten nach Busbrand auf Landstraße; Heli als Evakuierungsachse erforderlich.",
+    "location": [
+      53.144026,
+      8.211016
+    ],
+    "hospital": {
+      "name": "Pius-Hospital",
+      "location": [
+        53.14385714473953,
+        8.210912268834155
+      ]
+    }
+  }
+]

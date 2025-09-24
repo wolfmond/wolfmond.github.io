@@ -1,0 +1,370 @@
+<!doctype html>
+<!-- 
+⚠️ DANGER! This is a prototype. Use at your own risk.
+
+Current Version: 2025-09-24_05.45
+Invented by: Wolfmond
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org/>
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Quest Editor — Oldenburg Helirescue</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{--bg:#f6f8fb;--panel:#ffffff;--accent:#7a00ff}
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Arial,sans-serif;background:var(--bg)}
+  #map{position:absolute;left:320px;right:0;top:0;bottom:0}
+  .sidebar{position:fixed;left:12px;top:12px;width:296px;bottom:12px;background:var(--panel);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.08);padding:12px;overflow:auto;z-index:14000}
+  .header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  h1{font-size:16px;margin:0}
+  .muted{color:#666;font-size:13px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  button, input[type=file]{background:var(--accent);color:#fff;border:none;padding:8px 10px;border-radius:8px;font-weight:700;cursor:pointer}
+  button.secondary{background:#e9e9f6;color:#2b2b2b}
+  .form-row{margin:8px 0}
+  label{display:block;font-weight:700;margin-bottom:6px}
+  input[type=text], textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e6ef;font-size:14px}
+  textarea{min-height:64px}
+  .hint{font-size:12px;color:#666;margin-top:6px}
+  .quest-list{margin-top:12px}
+  .quest-item{padding:8px;border-radius:8px;border:1px solid #f0f0f5;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center}
+  .quest-item .meta{font-size:13px}
+  .quest-actions{display:flex;gap:6px}
+  .small{padding:6px 8px;font-size:13px;border-radius:8px}
+  .number-badge{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--accent);color:white;text-align:center;line-height:26px;font-weight:800;margin-right:8px}
+  .footer-note{font-size:12px;color:#666;margin-top:10px}
+  .map-tip{font-size:13px;color:#444;margin-top:8px}
+  .row{display:flex;gap:8px}
+  .grow{flex:1}
+  .muted-2{color:#888;font-size:12px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="header">
+    <div>
+      <h1>Quest Editor</h1>
+      <div class="muted">Erstelle / bearbeite deine quests.json für den Heli (Krankenhäuser werden beim Import/export unverändert erhalten)</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label style="background:transparent;display:inline-block">Load quests.json
+      <input id="fileInput" type="file" accept="application/json" style="display:block;margin-top:6px;background:transparent;color:var(--accent);padding:6px;border-radius:8px;border:1px dashed #ddd" />
+    </label>
+    <button id="newBtn" class="secondary">Neue Quest</button>
+    <button id="exportBtn">Exportieren</button>
+  </div>
+
+  <div style="border-top:1px solid #f0f0f5;padding-top:10px">
+    <div class="form-row">
+      <label for="qText">Quest Text</label>
+      <textarea id="qText" placeholder="Beschreibung des Einsatzes (z. B. Unfall auf der A28...)"></textarea>
+    </div>
+    <div class="form-row">
+      <label>Szene (Unfall) Koords</label>
+      <input id="sceneCoords" type="text" placeholder="lat,lng" />
+    </div>
+
+    <div class="map-tip">Klicke auf die Karte, um Koordinaten für die Szene zu setzen. Die Krankenhäuser werden beibehalten wie im Import.</div>
+
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="setSceneBtn" class="small">Set Scene</button>
+      <button id="saveQuestBtn" class="small">Quest speichern</button>
+    </div>
+
+    <div class="quest-list" id="questList"></div>
+
+    <div class="footer-note">Hinweis: Beim Export wird eine JSON-Datei erzeugt. Original-Krankenhausdaten bleiben erhalten; nur <code>location</code> der Szenen wird bei Bearbeitung aktualisiert.</div>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// --- Setup Map ---
+const map = L.map('map', { zoomControl:true }).setView([53.143559,8.22416], 13);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+
+// --- State ---
+let originalData = []; // raw objects as imported (keeps hospital objects exactly)
+let quests = [];       // derived list of { text, location: [lat,lng], hospitalRaw?: object }
+let hospitalMarkers = {};
+let sceneMarkers = []; // permanent numbered markers (now NOT draggable)
+let editingIndex = -1; // -1 = new
+let placeMode = null; // 'scene' or null
+let tempSceneMarker = null;
+
+// --- Helpers ---
+function toLatLngPair(str){
+  if(!str) return null;
+  const parts = str.split(',').map(s=>s.trim());
+  if(parts.length<2) return null;
+  const lat = parseFloat(parts[0]); const lng = parseFloat(parts[1]);
+  if(Number.isFinite(lat) && Number.isFinite(lng)) return [lat,lng];
+  return null;
+}
+function formatCoords(pair){ return pair ? pair[0].toFixed(6)+','+pair[1].toFixed(6) : '' }
+function makeHospitalKey(h){
+  if(!h) return null;
+  if(typeof h === 'string') return h;
+  const name = h.name || h.title || h[0] || '';
+  const loc = h.location && Array.isArray(h.location) ? h.location.join(',') : (h.lat && h.lng ? `${h.lat},${h.lng}` : '');
+  return `${name}|${loc}`;
+}
+
+// --- Marker icons ---
+function createSceneIcon(index){
+  return L.divIcon({
+    className:'',
+    html:`<div style="background:#ff3b3b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800">${index+1}</div>`,
+    iconSize:[28,28], iconAnchor:[14,14]
+  });
+}
+function createHospitalIcon(){
+  return L.divIcon({
+    className:'',
+    html:`<div style="background:transparent;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 6h2v4h4v2h-4v4h-2v-4H7v-2h4V6z" fill="#1e90ff"/>
+      </svg>
+    </div>`,
+    iconSize:[28,28], iconAnchor:[14,14]
+  });
+}
+
+// --- Drawing ---
+function clearAllSceneMarkers(){
+  sceneMarkers.forEach(m=>{ try{ map.removeLayer(m) }catch(e){} });
+  sceneMarkers = [];
+}
+function clearAllHospitalMarkers(){
+  Object.values(hospitalMarkers).forEach(m=>{ try{ map.removeLayer(m) }catch(e){} });
+  hospitalMarkers = {};
+}
+
+function drawAllMarkers(){
+  // hospitals (non-draggable)
+  clearAllHospitalMarkers();
+  const seenKeys = new Set();
+  originalData.forEach((item)=>{
+    if(item && item.hospital){
+      const key = makeHospitalKey(item.hospital);
+      if(!key || seenKeys.has(key)) return;
+      seenKeys.add(key);
+      let latlng = null;
+      if(Array.isArray(item.hospital.location) && item.hospital.location.length>=2){
+        latlng = [ item.hospital.location[0], item.hospital.location[1] ];
+      } else if(item.hospital.lat && item.hospital.lng){
+        latlng = [ parseFloat(item.hospital.lat), parseFloat(item.hospital.lng) ];
+      } else if(typeof item.hospital === 'string' && item.hospital.includes(',')){
+        const p = item.hospital.split(',').map(s=>s.trim());
+        latlng = [ parseFloat(p[0]), parseFloat(p[1]) ];
+      }
+      if(latlng && latlng.every(Number.isFinite)){
+        const marker = L.marker(latlng, { icon: createHospitalIcon(), draggable:false, title: (item.hospital.name || item.hospital.title || '') }).addTo(map);
+        hospitalMarkers[key] = marker;
+      }
+    }
+  });
+
+  // scenes (permanent numbered markers - NOT draggable)
+  clearAllSceneMarkers();
+  quests.forEach((q,i)=>{
+    if(!q.location || q.location.length<2) return;
+    const m = L.marker(q.location, { icon: createSceneIcon(i), draggable:false }).addTo(map);
+    // click opens edit (which spawns a separate draggable temp marker)
+    m.on('click', ()=> { startEdit(i); });
+    sceneMarkers.push(m);
+  });
+}
+
+// --- UI list / form ---
+function renderList(){
+  const container = document.getElementById('questList'); container.innerHTML='';
+  quests.forEach((q,i)=>{
+    const el = document.createElement('div'); el.className='quest-item';
+    const left = document.createElement('div'); left.className='meta';
+    left.innerHTML = `<span class="number-badge">${i+1}</span><strong>Quest ${i+1}</strong>
+      <div class="muted-2">${(q.text||'')}</div>
+      <div class="muted-2">Szene: ${formatCoords(q.location)}</div>
+      ${ q.hospitalRaw ? `<div class="muted-2">Krankenhaus: ${(q.hospitalRaw.name||q.hospitalRaw.title||'Unbekannt')}</div>` : '' }`;
+    const actions = document.createElement('div'); actions.className='quest-actions';
+    const edit = document.createElement('button'); edit.className='small secondary'; edit.textContent='Edit'; edit.onclick = ()=>{ startEdit(i); };
+    const del = document.createElement('button'); del.className='small'; del.textContent='Delete'; del.onclick = ()=>{ if(confirm('Löschen?')){ quests.splice(i,1); originalData.splice(i,1); renderList(); drawAllMarkers(); } };
+    const zoom = document.createElement('button'); zoom.className='small'; zoom.textContent='Zoom'; zoom.onclick = ()=>{ if(q.location) map.setView(q.location,15); };
+    actions.appendChild(edit); actions.appendChild(zoom); actions.appendChild(del);
+    el.appendChild(left); el.appendChild(actions);
+    container.appendChild(el);
+  });
+}
+
+// --- Editing flow ---
+// Permanent numbered markers are NOT draggable. Editing uses a separate temporary draggable marker.
+function startEdit(index){
+  editingIndex = index;
+  const q = quests[index];
+  document.getElementById('qText').value = q.text || '';
+  document.getElementById('qText').focus();
+  document.getElementById('sceneCoords').value = formatCoords(q.location);
+  clearTempSceneMarker();
+  // spawn a draggable temporary marker for editing
+  tempSceneMarker = L.marker(q.location, { draggable:true }).addTo(map);
+  tempSceneMarker.on('dragend', ()=> {
+    const p = tempSceneMarker.getLatLng();
+    const coords = [ parseFloat(p.lat.toFixed(6)), parseFloat(p.lng.toFixed(6)) ];
+    document.getElementById('sceneCoords').value = formatCoords(coords);
+    // live-update the quests array so UI reflects moved position
+    q.location = coords;
+    // also visually move the permanent marker so numbering stays at new position while editing
+    if(sceneMarkers[index]) sceneMarkers[index].setLatLng(coords);
+    renderList();
+  });
+  // clicking the temp marker also selects it (optional)
+  map.setView(q.location, 14);
+}
+
+function clearTempSceneMarker(){
+  if(tempSceneMarker){ try{ map.removeLayer(tempSceneMarker); }catch(e){} tempSceneMarker = null; }
+}
+
+function resetForm(){ editingIndex = -1; document.getElementById('qText').value=''; document.getElementById('sceneCoords').value=''; clearTempSceneMarker(); }
+
+// --- Handlers ---
+map.on('click', function(e){
+  if(placeMode === 'scene'){
+    const latlng = [ parseFloat(e.latlng.lat.toFixed(6)), parseFloat(e.latlng.lng.toFixed(6)) ];
+    document.getElementById('sceneCoords').value = formatCoords(latlng);
+    // create temporary draggable marker for the new/editing item
+    clearTempSceneMarker();
+    tempSceneMarker = L.marker(latlng, { draggable:true }).addTo(map);
+    tempSceneMarker.on('dragend', ()=> {
+      const p = tempSceneMarker.getLatLng();
+      document.getElementById('sceneCoords').value = p.lat.toFixed(6)+','+p.lng.toFixed(6);
+    });
+    placeMode = null; document.getElementById('setSceneBtn').textContent='Set Scene';
+  }
+});
+
+document.getElementById('setSceneBtn').addEventListener('click', ()=>{
+  placeMode = (placeMode === 'scene') ? null : 'scene';
+  document.getElementById('setSceneBtn').textContent = placeMode === 'scene' ? 'Click map...' : 'Set Scene';
+});
+
+// save quest (new or editing)
+document.getElementById('saveQuestBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('qText').value.trim();
+  const scene = toLatLngPair(document.getElementById('sceneCoords').value.trim());
+  if(!scene){ alert('Bitte Szene Koordinaten setzen.'); return; }
+  const questObj = { text: text, location: scene };
+
+  if(editingIndex >= 0 && originalData[editingIndex]){
+    // keep hospital info in the runtime object for UI
+    questObj.hospitalRaw = originalData[editingIndex].hospital ? originalData[editingIndex].hospital : undefined;
+    quests[editingIndex] = questObj;
+
+    // crucial: update originalData so export reflects edited text and location
+    originalData[editingIndex] = Object.assign({}, originalData[editingIndex], {
+      text: text,
+      location: scene
+    });
+
+  } else if(editingIndex >= 0){
+    // no original backing object - just update runtime array
+    quests[editingIndex] = questObj;
+  } else {
+    // new entry: push to both arrays (originalData will hold a minimal object so export includes it)
+    quests.push(questObj);
+    originalData.push({ text: text, location: scene });
+  }
+
+  // after save: remove temp marker and redraw permanent markers (non-draggable)
+  clearTempSceneMarker();
+  renderList(); drawAllMarkers(); resetForm();
+});
+
+
+// new quest
+document.getElementById('newBtn').addEventListener('click', ()=>{ resetForm(); document.getElementById('qText').focus(); });
+
+// export
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const exportArr = [];
+  for(let i=0;i<originalData.length;i++){
+    const orig = originalData[i];
+    const q = quests[i];
+    if(!orig) continue;
+    const out = JSON.parse(JSON.stringify(orig));
+    if(q && q.location) out.location = q.location;
+    exportArr.push(out);
+  }
+  if(quests.length > originalData.length){
+    for(let j=originalData.length;j<quests.length;j++){
+      const q = quests[j];
+      exportArr.push({ text: q.text||'', location: q.location || [0,0] });
+    }
+  }
+  const dataStr = JSON.stringify(exportArr, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'quests-export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+// load file
+document.getElementById('fileInput').addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data)) throw new Error('invalid format - expected array');
+      originalData = data.map(d => d ? d : {});
+      quests = originalData.map((d)=>{
+        const text = d.text || '';
+        let location = null;
+        if(Array.isArray(d.location) && d.location.length>=2) location = [ parseFloat(d.location[0]), parseFloat(d.location[1]) ];
+        else if(d.hospital && Array.isArray(d.hospital.location) && d.hospital.location.length>=2) location = [ parseFloat(d.hospital.location[0]), parseFloat(d.hospital.location[1]) ];
+        else location = [0,0];
+        const obj = { text: text, location: location };
+        if(d.hospital) obj.hospitalRaw = d.hospital;
+        return obj;
+      });
+      renderList(); drawAllMarkers(); alert('Quests geladen: '+quests.length);
+    }catch(err){ alert('Fehler beim Laden: '+err.message); }
+  };
+  reader.readAsText(f);
+});
+
+// initial render
+renderList();
+
+</script>
+</body>
+</html>

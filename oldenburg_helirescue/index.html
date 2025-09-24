@@ -1,0 +1,868 @@
+<!doctype html>
+<!-- 
+⚠️ DANGER! This is a prototype. Use at your own risk.
+
+Current Version: 2025-09-24_05.45
+Invented by: Wolfmond
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org/>
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Oldenburg Helirescue</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script>
+const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use. All Rights Reserved. No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
+if (!confirm(message)) window.location.href = "about:blank";
+alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Einsätze zugewiesen. Du bringst Verunfallte zum Krankenhaus.');
+ alert('ℹ\nSteuerung\nBild ↑ : hoch fliegen\nBild ↓ : runter fliegen\n1-7 : Geschwindigkeit\n ←↑↓→ : Heli Steuern');
+  alert('ℹ\nLande in den markierten Kreisen. Landen (Bild ↓) geht erst, wenn du nicht mehr fliegst.');
+  alert('ℹ\nStarte zu deinem ersten Einsatz. Halte Bild ↑ gedrückt, um vom Boden abzuheben.');
+  alert('ℹ\nViel Glück 🍀.');
+ 
+</script>
+<style>
+  html,body,#map{height:100%;margin:0;padding:0;font-family:system-ui,Arial,sans-serif}
+  #map{background:#e7eef8}
+  .car-center{position:absolute;z-index:12000;left:50%;top:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 25%,#9f3cff,#280032);border:3px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .car-center svg{width:62%;height:62%}
+  .hud{position:fixed;left:12px;top:12px;z-index:14000;background:rgba(255,255,255,0.95);padding:10px 12px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-weight:700}
+  .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:14000;background:rgba(255,255,255,0.9);padding:8px 12px;border-radius:8px;font-weight:600;display:none;}
+  .status{font-weight:800;color:#7a00ff;margin-left:8px; display:none;}
+  .leaflet-zoom-animated { transition: transform 320ms cubic-bezier(.25,.1,.25,1); will-change: transform; }
+  .leaflet-tile { transition: opacity 220ms linear; will-change: opacity, transform; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .leaflet-tile-loaded { opacity: 1; }
+  .leaflet-tile:not(.leaflet-tile-loaded) { opacity: 0; }
+  .leaflet-zoom-animated .leaflet-tile, .leaflet-zoom-hide .leaflet-tile { transition: opacity 220ms linear, transform 320ms cubic-bezier(.25,.1,.25,1); }
+  .flash { display:inline-block; padding:2px 6px; border-radius:6px; background:rgba(255,200,200,0.95); color:#7a0010; font-weight:800; margin-left:8px; }
+  
+  #zoomLevel {display:none;}
+  
+      .big-h-icon { display: block; line-height: 0; }
+
+  
+  .leaflet-container .leaflet-tile {
+  filter: hue-rotate(var(--map-hue, 0deg))
+          saturate(var(--map-sat, 1))
+          contrast(1)
+          brightness(1)
+          invert(0);
+  transition: filter 700ms ease; /* sanfter Übergang bei Änderung */
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="car-center" id="carDiv" title="Dein magisches Flugauto">
+  <svg viewBox="0 0 100 100" aria-hidden="true">
+    <polygon points="50,8 86,86 14,86" fill="#ff9ee7" stroke="rgba(255,255,255,0.12)" stroke-width="3" stroke-linejoin="round" />
+  </svg>
+</div>
+
+<div class="hud" id="hud">Speed: <span id="speed">0.0</span> m/s — Max: <span id="maxSpeed">30</span> m/s <span id="zoomLevel">17</span> <span class="status" id="landState"></span></div>
+<div class="hint">Steuerung: Pfeiltasten = lenken / Gas / Bremse • 1–9 = Max Speed • Leertaste = Pause • Bild↑/Bild↓ = Höhe ändern (14–18 beim Flug, 19 = Landen wenn gestoppt). Bei Landung werden Bewegung/Lenkung deaktiviert — Bild↑ (PageUp) bleibt aktiv, damit du wieder steigen (take-off) kannst.</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// --- Konfiguration ---
+const STARTPOS = [53.137181, 8.255045];
+let ZOOM = 19; // initial (start in landed view)
+const ZOOM_MIN = 14;
+const ZOOM_MAX_SAFE = 18;
+const ZOOM_LAND = 19;
+
+const GEARS = {
+  1: 0, 2: 6, 3: 12, 4: 24, 5: 40, 6: 60, 7: 80
+};
+let currentGear = 5;
+let lastGearChangeTime = 0;
+let MAX_SPEED = GEARS[currentGear];
+
+const ACCEL = 12; // m/s^2
+const FRICTION = 1.5; // m/s^2
+const BRAKE_DECEL = 6; // m/s^2
+
+// --- Wind (pro Quest) ---
+let wind = { speed:0, dir:0, gustAmp:0, gustFreq:0, seed:0 };
+const MAX_WIND = 0.5;
+const BOOST_WIND_LIMIT = 12;
+const LAND_WIND_MAX = 3;
+
+let _prevNavDist = '';
+let _prevNavWind = '';
+let _prevArrowRot = null;
+let _lastNavUpdate = 0; // ms - rate-limit
+
+let navArrowSVG = null;
+let navDist = null;
+let navWindEl = null;
+
+
+function getCurrentWindSpeed(){
+  if(!wind) return 0;
+  const now = performance.now() / 1000;
+  const gustNow = wind.gustAmp ? (wind.gustAmp * Math.sin(now * wind.gustFreq * Math.PI * 2 + wind.seed)) : 0;
+  return Math.max(0, wind.speed + gustNow);
+}
+
+// --- Karte ---
+const map = L.map('map', {
+  keyboard:false,
+  zoomControl:false,
+  attributionControl:true,
+  zoomAnimation: true,
+  zoomSnap: 0.25,
+  zoomDelta: 0.5,
+  inertia: false
+}).setView(STARTPOS, ZOOM);
+
+// disable user interaction with map to keep game controls exclusive
+map.dragging.disable();
+map.scrollWheelZoom.disable();
+map.doubleClickZoom.disable();
+map.boxZoom.disable();
+map.touchZoom.disable();
+if (map.tap) map.tap.disable();
+map.keyboard.disable();
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:19,
+  attribution: '&copy; OpenStreetMap contributors',
+  keepBuffer: 2,
+  updateWhenZooming: true,
+  reuseTiles: true
+}).addTo(map);
+map.eachLayer(layer=>{ if(layer instanceof L.TileLayer){
+  layer.on('tileload', (ev)=> { ev.tile.classList.add('leaflet-tile-loaded'); });
+  layer.on('tileunload', (ev)=> { ev.tile.classList.remove('leaflet-tile-loaded'); });
+}});
+
+
+ 
+
+    // Größe des Icons in Pixel (Durchmesser des Kreises)
+    const size = 56; // z.B. 56px, anpassen nach Wunsch
+    const fontSize = 28; // Schriftgröße 'H'
+	
+	const hangar = [(STARTPOS[0]+0.0001),STARTPOS[1]]
+
+    // SVG-HTML für Kreis + Buchstabe H (zentriert)
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <!-- Kreis -->
+        <circle cx="${size/2}" cy="${size/2}" r="${(size/2)-1}" fill="white" stroke="#2b7bb9" stroke-width="2"/>
+        <!-- Buchstabe H (mittig) -->
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central"
+              font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="700" fill="#2b7bb9">H</text>
+      </svg>
+    `;
+
+    // DivIcon erstellen: className leer lassen, damit Leaflet nicht zusätzliche Styles setzt
+    const icon = L.divIcon({
+      html: `<div class="big-h-icon">${svg}</div>`,
+      className: '',            // keine extra Leaflet-Klasse (oder setze eigene Klasse)
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2] // Mitte des Icons an der Koordinate
+    });
+
+    // Marker mit dem Icon
+    L.marker(hangar, { icon }).addTo(map);
+
+    // Optional: auch einen Kreis als Leaflet-Layer (z.B. Interaktion / Tooltip)
+     
+	
+
+
+// --- Fahrzeugzustand ---
+let carPos = L.latLng(STARTPOS[0], STARTPOS[1]);
+let headingDeg = 0; // 0 = Norden
+let speed = 0; // AIRSPEED in m/s (pilot-set)
+let paused = true;
+
+// auto-pan protection
+let autoPanSuspended = false;
+let pendingAutoPan = false;
+function suspendAutoPanUntilZoomEnd(){
+  autoPanSuspended = true;
+  pendingAutoPan = true;
+  const handler = ()=>{
+    if(!autoPanSuspended) return;
+    autoPanSuspended = false;
+    if(pendingAutoPan){
+      map.panTo(carPos, {animate:false});
+      pendingAutoPan = false;
+    }
+    updateZoomUI();
+    if(typeof checkQuestProgress === 'function') checkQuestProgress();
+  };
+  map.once('zoomend', handler);
+  map.once('moveend', handler);
+}
+
+function degToCompass(deg){
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const ix = Math.floor(((deg + 11.25) % 360) / 22.5);
+  return dirs[ix];
+}
+
+let flashTimeout = null;
+function flashMessage(txt){
+  const el = document.getElementById('landState');
+  el.textContent = ' ' + txt;
+  if(flashTimeout) clearTimeout(flashTimeout);
+  flashTimeout = setTimeout(()=>{ updateZoomUI(); flashTimeout = null; }, 1400);
+}
+
+let boostActive = false;
+const BOOST_MULT = 2.5;
+
+// --- Eingabe ---
+const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
+document.addEventListener('keydown', (e)=>{
+  if((e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA')) ) return;
+  if(e.key === 'Shift') boostActive = true;
+  if(e.key === ' ') { e.preventDefault(); paused = !paused; return; }
+
+  if(e.key >= '1' && e.key <= '9'){
+    const g = parseInt(e.key, 10);
+    if(GEARS.hasOwnProperty(g)){
+      currentGear = g;
+      MAX_SPEED = GEARS[currentGear];
+      lastGearChangeTime = performance.now();
+      document.getElementById('maxSpeed').textContent = Math.round(MAX_SPEED);
+    } else {
+      flashMessage('Gang nicht verfügbar');
+    }
+    return;
+  }
+
+  if(e.key === 'PageUp' || e.key === 'PageDown'){
+    e.preventDefault(); handleAltitudeKey(e.key === 'PageUp'); return;
+  }
+
+  if(isLanded()){
+    return;
+  }
+
+  if(e.key in keys){ keys[e.key] = true; e.preventDefault(); }
+});
+document.addEventListener('keyup', (e)=>{ 
+  if(e.key in keys){ keys[e.key] = false; e.preventDefault(); }
+  if(e.key === 'Shift') boostActive = false;
+});
+
+// --- Altitude / Zoom-Logik ---
+function startFlyToZoom(targetZoom, duration = 0.36){
+  suspendAutoPanUntilZoomEnd();
+  map.flyTo(carPos, targetZoom, { animate: true, duration: duration, easeLinearity: 0.25 });
+}
+function isLanded(){
+  return Math.round(map.getZoom()) === ZOOM_LAND;
+}
+
+function handleAltitudeKey(isPageUp){
+  const cur = map.getZoom();
+
+  if(isLanded()){
+    if(isPageUp){
+      // take-off
+      startFlyToZoom(ZOOM_MAX_SAFE, 0.45);
+      paused = false;
+      updateZoomUI();
+    }
+    return;
+  }
+
+  if(isPageUp){
+    if(paused) paused = false;
+    if(cur <= ZOOM_MIN) return;
+    const next = Math.max(ZOOM_MIN, cur - 1);
+    startFlyToZoom(next, 0.36);
+    updateZoomUI();
+    return;
+  } else {
+    if(cur < ZOOM_MAX_SAFE){
+      const next = Math.min(ZOOM_MAX_SAFE, cur + 1);
+      startFlyToZoom(next, 0.36);
+      updateZoomUI();
+      return;
+    }
+
+    // Attempt to land: speed must be ~0 and current wind must be acceptable
+    if(Math.abs(speed) <= 0.0001){
+      const currentWind = getCurrentWindSpeed();
+      if(currentWind > LAND_WIND_MAX){
+        flashMessage('Zu starker Wind zum Landen');
+        return;
+      }
+      startFlyToZoom(ZOOM_LAND, 0.45);
+      paused = true;
+      updateZoomUI();
+    } else {
+      flashMessage('— Nicht landen: zuerst anhalten');
+    }
+  }
+}
+
+// --- UI Update ---
+function updateZoomUI(){ 
+  const z = map.getZoom();
+  document.getElementById('zoomLevel').textContent = Number(z).toFixed(2).replace('.00',''); 
+  const state = document.getElementById('landState');
+  if(Math.round(z) === ZOOM_LAND){ state.textContent = ' (Gelandet — Steuerung deaktiviert; Bild↑ bleibt aktiv)'; }
+  else if(z >= ZOOM_MAX_SAFE){ state.textContent = ' (In-flight: näher)'; }
+  else if(z <= ZOOM_MIN+0.1){ state.textContent = ' (In-flight: weit)'; }
+  else { state.textContent = ''; }
+}
+
+// --- Haversine-ish helper ---
+const R = 6378137; 
+function toRad(d){return d*Math.PI/180;} 
+function toDeg(r){return r*180/Math.PI;} 
+
+function destinationPoint(lat, lon, distanceMeters, bearingDeg){
+  const δ = distanceMeters / R;
+  const θ = toRad(bearingDeg);
+  const φ1 = toRad(lat);
+  const λ1 = toRad(lon);
+  const sinφ1=Math.sin(φ1), cosφ1=Math.cos(φ1);
+  const sinδ=Math.sin(δ), cosδ=Math.cos(δ);
+  const φ2 = Math.asin(sinφ1*cosδ + cosφ1*sinδ*Math.cos(θ));
+  const λ2 = λ1 + Math.atan2(Math.sin(θ)*sinδ*cosφ1, cosδ - sinφ1*Math.sin(φ2));
+  return L.latLng(toDeg(φ2), toDeg(λ2));
+}
+
+// sehr einfache, nicht rechenintensive Wetter-Visuals
+function applyWeatherVisuals(w, map) {
+  const MIN_SAT = 0.2;
+  const MAX_SAT = 0.3;
+
+  // Bestimme das Element, auf dem wir die CSS-Variable setzen:
+  // wenn eine Leaflet map-Instanz übergeben wurde, nutzen wir deren Container,
+  // sonst document.documentElement (root).
+  const rootEl = (map && typeof map.getContainer === 'function')
+    ? map.getContainer()
+    : document.documentElement;
+
+  if (w === 'dunst') {
+    // einmaliger, leicht variierender Sättigungswert pro Aufruf
+    const sat = (Math.random() * (MAX_SAT - MIN_SAT) + MIN_SAT).toFixed(2);
+    // setze die CSS-Variable (kein "px" nötig — saturate() erwartet eine Zahl)
+    rootEl.style.setProperty('--map-sat', sat);
+    // optional: Klasse zum Container, falls du weitere dunst-spezifische Regeln möchtest
+    rootEl.classList.add('weather-dunst');
+  } else {
+    // entferne die Variable / Klasse wieder, falls kein Dunst mehr
+    rootEl.style.removeProperty('--map-sat');
+    rootEl.classList.remove('weather-dunst');
+  }
+}
+
+
+
+// ---------------- Quests & Landing overlay ----------------
+const LAND_RADIUS = 20;
+let quests = [];
+let currentQuestIndex = -1;
+let currentQuest = null;
+let questState = null;
+
+function createLandingOverlay(latlng, meterRadius = 20, opts = {}){
+  const color = opts.color || 'red';
+  const strokeWidth = (typeof opts.weight === 'number') ? opts.weight : 2;
+  const fillOpacity = (typeof opts.fillOpacity === 'number') ? opts.fillOpacity : 0.12;
+  const pane = map.getPanes().overlayPane;
+  const container = L.DomUtil.create('div', 'landing-overlay');
+  container.style.position = 'absolute';
+  container.style.pointerEvents = 'none';
+  container.style.transformOrigin = '0 0';
+  container.style.willChange = 'transform';
+  pane.appendChild(container);
+
+  function metersToPx(meters, centerLatLng) {
+    const center = toLatLngObj(centerLatLng);
+    if(!center) return 1;
+    const pCenter = map.latLngToLayerPoint(center);
+    const eastLatLng = destinationPoint(center.lat, center.lng, meters, 90);
+    const pEast = map.latLngToLayerPoint(eastLatLng);
+    return Math.max(1, Math.abs(pEast.x - pCenter.x));
+  }
+
+  function update(){
+    try{
+      const pt = map.latLngToLayerPoint(toLatLngObj(latlng));
+      const pxR = metersToPx(meterRadius, latlng);
+      const size = Math.ceil(pxR * 2 + strokeWidth * 2);
+      const left = Math.round(pt.x - pxR - strokeWidth);
+      const top = Math.round(pt.y - pxR - strokeWidth);
+      container.style.width = size + 'px';
+      container.style.height = size + 'px';
+      container.style.left = left + 'px';
+      container.style.top = top + 'px';
+      const cx = Math.round(size / 2), cy = cx, r = Math.round(pxR);
+      container.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg"><circle cx="${cx}" cy="${cy}" r="${r}" stroke="${color}" stroke-width="${strokeWidth}" fill="${color}" fill-opacity="${fillOpacity}"></circle></svg>`;
+    }catch(e){}
+  }
+
+  const bound = ()=> update();
+  map.on('move', bound);
+  map.on('zoom', bound);
+  map.on('zoomanim', bound);
+  map.on('viewreset', bound);
+  update();
+
+  return {
+    el: container,
+    stop() {
+      map.off('move', bound);
+      map.off('zoom', bound);
+      map.off('zoomanim', bound);
+      map.off('viewreset', bound);
+      try { pane.removeChild(container); } catch(e){}
+    }
+  };
+}
+
+// Bearing helper
+function bearingBetween(a, b){
+  const A = toLatLngObj(a), B = toLatLngObj(b);
+  const φ1 = toRad(A.lat), φ2 = toRad(B.lat);
+  const Δλ = toRad(B.lng - A.lng);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  const θ = Math.atan2(y, x);
+  return (toDeg(θ) + 360) % 360;
+}
+
+function toLatLngObj(v){
+  if(!v) return null;
+  if(typeof v.lat === 'number' && typeof v.lng === 'number') return v;
+  if(Array.isArray(v)) return L.latLng(v[0], v[1]);
+  if(typeof v === 'object' && typeof v[0] === 'number') return L.latLng(v[0], v[1]);
+  return null;
+}
+
+function shuffleArray(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function distanceMetersBetween(a,b){
+  const A = toLatLngObj(a), B = toLatLngObj(b);
+  if(!A || !B) return Infinity;
+  const φ1 = toRad(A.lat), λ1 = toRad(A.lng), φ2 = toRad(B.lat), λ2 = toRad(B.lng);
+  const Δφ = φ2 - φ1, Δλ = λ2 - λ1;
+  const ha = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(ha), Math.sqrt(1-ha));
+  return R * c;
+}
+
+// HUD nav
+let navBox = document.getElementById('navBox');
+if(!navBox){
+// --- NAV-BOX (stabiles Layout, feste Spalten, keine Wanderungen) ---
+navBox = document.createElement('div');
+navBox.id = 'navBox';
+navBox.style.position = 'fixed';
+navBox.style.right = '12px';
+navBox.style.bottom = '12px';
+navBox.style.zIndex = 15000;
+navBox.style.background = 'rgba(255,255,255,0.95)';
+navBox.style.borderRadius = '10px';
+navBox.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+navBox.style.display = 'none';
+
+// Layout / fixe Größe
+navBox.style.width = '260px';         // fixe Gesamtbreite (anpassen falls nötig)
+navBox.style.boxSizing = 'border-box';
+navBox.style.padding = '8px 10px';
+navBox.style.overflow = 'hidden';
+navBox.style.whiteSpace = 'nowrap';
+navBox.style.fontWeight = '800';
+navBox.style.fontFamily = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial";
+navBox.style.display = 'flex';
+navBox.style.alignItems = 'center';
+navBox.style.gap = '8px';
+navBox.style.transition = 'opacity 120ms linear';
+
+// feste Inhalte (feste Flex-Basis / monospace für Zahlen)
+navBox.innerHTML = `
+  <div id="navArrow" style="flex:0 0 48px; display:flex; align-items:center; justify-content:center;">
+    <svg viewBox="0 0 100 100" id="navArrowSVG" style="width:38px;height:38px; will-change:transform; transform-origin:50% 50%;">
+      <polygon points="50,6 86,90 50,72 14,90" fill="#7a00ff" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
+    </svg>
+  </div>
+
+  <div id="navDist" style="flex:0 0 80px; text-align:right; font-size:14px;
+       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'DejaVu Sans Mono', monospace;
+       font-variant-numeric: tabular-nums;">
+    — km
+  </div>
+
+  <div id="navWind" style="flex:0 0 116px; text-align:right; font-size:13px;
+       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'DejaVu Sans Mono', monospace;
+       font-variant-numeric: tabular-nums;">
+    Wind: — m/s
+  </div>
+`;
+document.body.appendChild(navBox);
+
+navArrowSVG = document.getElementById('navArrowSVG');
+navDist = document.getElementById('navDist');
+navWindEl = document.getElementById('navWind');
+
+  let qb = document.getElementById('questBox');
+  if(!qb){
+    qb = document.createElement('div');
+    qb.id = 'questBox';
+    qb.style.position = 'fixed';
+    qb.style.left = '12px';
+    qb.style.top = '64px';
+    qb.style.zIndex = 14000;
+    qb.style.background = 'rgba(255,255,255,0.95)';
+    qb.style.padding = '8px 12px';
+    qb.style.borderRadius = '8px';
+    qb.style.fontWeight = '700';
+    qb.style.maxWidth = '36ch';
+    document.body.appendChild(qb);
+  }
+}
+
+
+function showNavUI(show){
+  navBox.style.display = show ? 'flex' : 'none';
+}
+
+// Quest visuals
+let activeScenePulse = null;
+let activeHospitalPulse = null;
+
+// load quests
+function loadQuests(path = 'quests.json'){
+  return fetch(path).then(r=>{
+    if(!r.ok) throw new Error('no file');
+    return r.json();
+  }).catch(err=>{
+    console.warn('Quests load failed, using fallback examples.', err);
+    return [
+      {
+        text: "Schwerer Unfall auf der A28 bei Oldenburg, Massenkarambolage. Ein Schwerverletzer mit Verdacht auf Schädel-Hirn-Trauma. Bitte Patient abholen und nach Klinikum Oldenburg bringen.",
+        location: [53.1438, 8.2250],
+        hospital: { name: "Klinikum Oldenburg", location: [53.1443, 8.2192] }
+      }
+    ];
+  }).then(data=>{
+    const NUM_QUESTS = 3;
+
+    // --- LIMITIEREN auf die ersten 8 Einträge VOR dem Shufflen ---
+    const limited = Array.isArray(data) ? data.slice(0, 10) : [];
+
+    // shuffleArray erwartet ein Array; hier wird das gekürzte Array gemischt
+    const shuffled = shuffleArray(limited.slice());
+
+    // final: nimm bis zu NUM_QUESTS (wird durch `limited` automatisch begrenzt)
+    quests = shuffled.slice(0, Math.min(NUM_QUESTS, shuffled.length));
+    currentQuestIndex = -1;
+    startNextQuest();
+  });
+}
+
+
+// start next quest & set wind
+function startNextQuest(){
+  if(activeScenePulse){ activeScenePulse.stop(); activeScenePulse = null; }
+  if(activeHospitalPulse){ activeHospitalPulse.stop(); activeHospitalPulse = null; }
+  
+  
+
+  currentQuestIndex++;
+  if(currentQuestIndex >= quests.length){
+    currentQuest = null; questState = null;
+    showNavUI(false);
+    flashMessage('Alle Einsätze erledigt — Spielende');
+    let qb = document.getElementById('questBox');
+    if(qb) qb.textContent = 'Alle Einsätze erledigt — Glückwunsch!';
+    return;
+  }
+
+  currentQuest = quests[currentQuestIndex];
+  questState = 'toScene';
+  
+  const weathers = ['dunst']; 
+weather = weathers[Math.floor(Math.random()*weathers.length)];
+console.log(weather);
+applyWeatherVisuals(weather, map);
+
+  // set per-quest wind (playable)
+  (function setQuestWind(){
+    wind.dir = Math.floor(Math.random() * 360);
+    const r = Math.random();
+    wind.speed = Math.round((Math.sqrt(r) * MAX_WIND) * 10) / 10;
+    wind.gustAmp = Math.round(Math.min(0.45 * wind.speed, 6) * 10) / 10;
+    wind.gustFreq = 0.15 + Math.random() * 0.2;
+    wind.seed = Math.random() * Math.PI * 2;
+    const qb = document.getElementById('questBox');
+    if(qb){
+      //qb.textContent = `Einsatz: ${currentQuest.text}\n→ Lande im roten Kreis am Einsatzort\nWind: ${wind.speed} m/s Richtung ${wind.dir}° (Gust ±${wind.gustAmp} m/s)`;
+      //qb.textContent = `Einsatz: ${currentQuest.text}\n→ Lande im roten Kreis am Einsatzort`;
+      qb.textContent = `Einsatz: ${currentQuest.text}`;
+    }
+  })();
+
+  activeScenePulse = createLandingOverlay(currentQuest.location, LAND_RADIUS, { color: 'red', weight: 2, fillOpacity: 0.12 });
+  activeHospitalPulse = null;
+
+  flashMessage('Neue Quest: Einsatzort sichtbar');
+  showNavUI(true);
+}
+
+// check progress (pickup/delivery) - now with wind check
+function checkQuestProgress(){
+  if(!currentQuest) return;
+  if(questState === 'toScene'){
+    const dist = distanceMetersBetween(carPos, currentQuest.location);
+    if(dist <= LAND_RADIUS && isLanded() && Math.abs(speed) <= 0.0001 && getCurrentWindSpeed() <= LAND_WIND_MAX){
+      if(activeScenePulse){ activeScenePulse.stop(); activeScenePulse = null; }
+      flashMessage('Patient*in aufgenommen — Krankenhaus jetzt sichtbar');
+      questState = 'toHospital';
+      activeHospitalPulse = createLandingOverlay(currentQuest.hospital.location, LAND_RADIUS, { color: 'blue' });
+      let qb = document.getElementById('questBox');
+      if(qb) qb.textContent = `Patient*in an Bord — fliege zum Krankenhaus: ${currentQuest.hospital.name}`;
+    }
+  } else if(questState === 'toHospital'){
+    const dist = distanceMetersBetween(carPos, currentQuest.hospital.location);
+    if(dist <= LAND_RADIUS && isLanded() && Math.abs(speed) <= 0.0001 && getCurrentWindSpeed() <= LAND_WIND_MAX){
+      if(activeHospitalPulse){ activeHospitalPulse.stop(); activeHospitalPulse = null; }
+      flashMessage('Patient*in abgeliefert — Einsatz abgeschlossen');
+      let qb = document.getElementById('questBox');
+      if(qb) qb.textContent = `Einsatz ${currentQuestIndex+1} abgeschlossen`;
+      setTimeout(()=>{ startNextQuest(); }, 900);
+    }
+  }
+}
+
+// update navigation UI
+function updateNavigationUI(){
+  // Rate-limit: nicht öfter als ~10x/s updaten (100 ms)
+  const nowMs = performance.now();
+  if(nowMs - _lastNavUpdate < 80) return;
+  _lastNavUpdate = nowMs;
+
+  if(!currentQuest){ showNavUI(false); return; }
+  const target = (questState === 'toScene') ? currentQuest.location : (currentQuest.hospital && currentQuest.hospital.location);
+  if(!target){ showNavUI(false); return; }
+
+  // Distanztext
+  const distM = distanceMetersBetween(carPos, target);
+  const distText = `${(distM/1000).toFixed(2)} km`;
+
+  // Wind-Text
+  const t = performance.now() / 1000;
+  const gustNow = wind && wind.gustAmp ? (wind.gustAmp * Math.sin(t * wind.gustFreq * Math.PI * 2 + wind.seed)) : 0;
+  const currentWind = Math.round(( (wind && wind.speed ? wind.speed : 0) + gustNow) * 10) / 10;
+  const dirStr = degToCompass(wind && wind.dir ? wind.dir : 0);
+  const windText = `Wind: ${currentWind.toFixed(1)} m/s ${dirStr}`;
+
+  // Arrow-Rotation (absolute bearing)
+  const absBearing = bearingBetween(carPos, target); // 0..360
+  const rot = Math.round(absBearing); // simple integer deg
+  const ROT_THRESHOLD = 2; // nur drehen bei >2° Änderung
+
+  // Update nur wenn sich etwas geändert (vermeidet DOM writes)
+  if(distText !== _prevNavDist){
+    navDist.textContent = distText;
+    _prevNavDist = distText;
+  }
+  if(windText !== _prevNavWind){
+    if(navWindEl) navWindEl.textContent = windText;
+    _prevNavWind = windText;
+  }
+  if(_prevArrowRot === null || Math.abs(rot - _prevArrowRot) > ROT_THRESHOLD){
+    if(navArrowSVG){
+      navArrowSVG.style.transform = `rotate(${rot}deg)`;
+    }
+    _prevArrowRot = rot;
+  }
+
+  showNavUI(true);
+}
+
+
+// load quests
+loadQuests('quests.json');
+
+// ---------------- ANIMATE (neu: Wind, boost, headwind penalty, ground vel) ----------------
+let last = null;
+function animate(ts){
+  if(paused){ last = ts; requestAnimationFrame(animate); return; }
+  if(!last) last = ts;
+  const dt = Math.min(0.05, (ts - last)/1000);
+  last = ts;
+
+  // if landed: disable movement but still update HUD/navigation
+  if(!isLanded()){
+    // steering
+    const steerSpeed = 140;
+    if(keys.ArrowLeft) headingDeg = (headingDeg - steerSpeed * dt + 360) % 360;
+    if(keys.ArrowRight) headingDeg = (headingDeg + steerSpeed * dt) % 360;
+
+    // --- Wind now (incl gust) ---
+    const now = performance.now() / 1000;
+    const gust = wind.gustAmp ? (wind.gustAmp * Math.sin(now * wind.gustFreq * Math.PI * 2 + wind.seed)) : 0;
+    const windSpeedNow = wind.speed + gust;
+    const windRad = toRad(wind.dir || 0);
+    const wind_v_n = windSpeedNow * Math.cos(windRad);
+    const wind_v_e = windSpeedNow * Math.sin(windRad);
+
+    // --- preset / boost decision (boost disabled if wind too strong) ---
+    const preset = (typeof GEARS[currentGear] === 'number') ? GEARS[currentGear] : (MAX_SPEED || 0);
+    let allowBoost = false;
+    if(currentQuest){
+      const target = (questState === 'toScene') ? currentQuest.location : (currentQuest.hospital && currentQuest.hospital.location);
+      if(target){
+        const distToTarget = distanceMetersBetween(carPos, target);
+        allowBoost = distToTarget > 20000;
+      }
+    }
+    if(windSpeedNow > BOOST_WIND_LIMIT) allowBoost = false;
+    const boostFactor = (boostActive && allowBoost) ? BOOST_MULT : 1.0;
+    const effectiveMax = preset * boostFactor;
+
+    // throttle input
+    let throttleInput = 0;
+    if (keys.ArrowUp) throttleInput = 1;
+    else if (keys.ArrowDown) throttleInput = -0.5;
+
+    // agility for quick response just after gear change
+    let agility = 1.0;
+    if(lastGearChangeTime){
+      const since = (performance.now() - lastGearChangeTime) / 1000;
+      if(since < 0.25) agility = 1.6;
+    }
+
+    // --- Headwind penalty ---
+    const helRad = toRad(headingDeg);
+    const air_v_n = speed * Math.cos(helRad);
+    const air_v_e = speed * Math.sin(helRad);
+    const windMag = Math.sqrt(wind_v_n*wind_v_n + wind_v_e*wind_v_e);
+    let headwindComponent = 0;
+    if(windMag > 1e-6){
+      headwindComponent = (air_v_n * wind_v_n + air_v_e * wind_v_e) / windMag;
+    }
+    const headwind = -headwindComponent; // positive = headwind
+    const headwindPenaltyFactor = (headwind > 0) ? Math.max(0.4, 1 - headwind / 30) : 1.0;
+
+    // desired airspeed
+    const desired = effectiveMax * throttleInput;
+
+    // acceleration limited approach (prevent jump when shifting gear)
+    const delta = desired - speed;
+    const accelCap = ACCEL * headwindPenaltyFactor * agility * dt;
+    let dv = 0;
+    if(delta > 0){
+      dv = Math.min(delta, accelCap);
+    } else if(delta < 0){
+      dv = Math.max(delta, -BRAKE_DECEL * dt);
+    }
+    speed += dv;
+
+    // passive drag + friction applied to airspeed
+    const DRAG_COEFF = 0.0008;
+    if(Math.abs(speed) > 0.0001){
+      const dragDecel = DRAG_COEFF * speed * Math.abs(speed);
+      const linearDecel = FRICTION;
+      const totalDecel = (dragDecel + linearDecel) * dt;
+      if(speed > 0) speed = (speed - totalDecel > 0) ? speed - totalDecel : 0;
+      else speed = (speed + totalDecel < 0) ? speed + totalDecel : 0;
+    }
+
+    if(keys.ArrowDown && speed > 0){
+      speed = Math.max(0, speed - (BRAKE_DECEL * 0.5) * dt);
+    }
+
+    // soft clamps
+    const lowerBound = -effectiveMax * 0.5;
+    if(speed > effectiveMax) speed = Math.max(effectiveMax, speed - BRAKE_DECEL * dt);
+    if(speed < lowerBound) speed = Math.min(lowerBound, speed + BRAKE_DECEL * dt);
+
+    // compute ground velocity (air + wind)
+    const ground_v_n = speed * Math.cos(helRad) + wind_v_n;
+    const ground_v_e = speed * Math.sin(helRad) + wind_v_e;
+    const ground_speed = Math.sqrt(ground_v_n*ground_v_n + ground_v_e*ground_v_e);
+
+    if(ground_speed > 0.0001){
+      const move = ground_speed * dt;
+      const moveBearingDeg = (toDeg(Math.atan2(ground_v_e, ground_v_n)) + 360) % 360;
+      carPos = destinationPoint(carPos.lat, carPos.lng, move, moveBearingDeg);
+
+      if(!autoPanSuspended){
+        map.panTo(carPos, {animate:false});
+      } else {
+        pendingAutoPan = true;
+      }
+    }
+  } else {
+    // landed
+    speed = 0;
+  }
+
+  // HUD: show preset and boost availability
+  const presetNow = (typeof GEARS[currentGear] === 'number') ? GEARS[currentGear] : (MAX_SPEED || 0);
+  const canBoostNow = boostActive && currentQuest && distanceMetersBetween(carPos, ((questState === 'toScene')? currentQuest.location : currentQuest.hospital.location)) > 20000 && getCurrentWindSpeed() <= BOOST_WIND_LIMIT;
+  document.getElementById('maxSpeed').textContent = Math.round(presetNow * (canBoostNow ? BOOST_MULT : 1));
+
+  // display speed, UI and checks
+  document.getElementById('speed').textContent = (speed).toFixed(1);
+  updateZoomUI();
+  const carDiv = document.getElementById('carDiv');
+  if(carDiv){ carDiv.style.transform = `translate(-50%,-50%) rotate(${(headingDeg)}deg)`; }
+
+  // quest & nav
+  checkQuestProgress();
+  updateNavigationUI();
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+
+// resize inval
+window.addEventListener('resize', ()=>{ setTimeout(()=>map.invalidateSize(),120); });
+
+// init HUD
+map.whenReady(()=>{
+  updateZoomUI();
+  document.getElementById('maxSpeed').textContent = Math.round(MAX_SPEED);
+});
+</script>
+</body>
+</html>
