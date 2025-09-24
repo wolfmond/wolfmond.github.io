@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-24_05.45
+Current Version: 2025-09-24_13.44
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -63,6 +63,13 @@ For more information, please refer to <https://unlicense.org/>
   .row{display:flex;gap:8px}
   .grow{flex:1}
   .muted-2{color:#888;font-size:12px}
+  
+  /* kurzzeitiges Highlight nach Save */
+.quest-item.flash {
+  box-shadow: 0 8px 30px rgba(122,0,255,0.18);
+  transform: translateX(3px);
+  transition: box-shadow 320ms ease, transform 320ms ease;
+}
 </style>
 </head>
 <body>
@@ -210,7 +217,12 @@ function drawAllMarkers(){
 function renderList(){
   const container = document.getElementById('questList'); container.innerHTML='';
   quests.forEach((q,i)=>{
-    const el = document.createElement('div'); el.className='quest-item';
+    const el = document.createElement('div');
+    el.className='quest-item';
+    el.setAttribute('data-index', String(i)); // <-- so finden wir das Element später
+    // optional: id statt data-attr
+    // el.id = 'quest-item-' + i;
+
     const left = document.createElement('div'); left.className='meta';
     left.innerHTML = `<span class="number-badge">${i+1}</span><strong>Quest ${i+1}</strong>
       <div class="muted-2">${(q.text||'')}</div>
@@ -225,6 +237,7 @@ function renderList(){
     container.appendChild(el);
   });
 }
+
 
 // --- Editing flow ---
 // Permanent numbered markers are NOT draggable. Editing uses a separate temporary draggable marker.
@@ -279,36 +292,68 @@ document.getElementById('setSceneBtn').addEventListener('click', ()=>{
 });
 
 // save quest (new or editing)
-document.getElementById('saveQuestBtn').addEventListener('click', ()=>{
+// save quest (neu oder editing) — ERSETZE deine vorhandene handler-Funktion damit
+document.getElementById('saveQuestBtn').addEventListener('click', ()=> {
   const text = document.getElementById('qText').value.trim();
   const scene = toLatLngPair(document.getElementById('sceneCoords').value.trim());
   if(!scene){ alert('Bitte Szene Koordinaten setzen.'); return; }
   const questObj = { text: text, location: scene };
 
+  // 1) Update arrays (wie vorher)
   if(editingIndex >= 0 && originalData[editingIndex]){
-    // keep hospital info in the runtime object for UI
     questObj.hospitalRaw = originalData[editingIndex].hospital ? originalData[editingIndex].hospital : undefined;
     quests[editingIndex] = questObj;
-
-    // crucial: update originalData so export reflects edited text and location
-    originalData[editingIndex] = Object.assign({}, originalData[editingIndex], {
-      text: text,
-      location: scene
-    });
-
+    originalData[editingIndex] = Object.assign({}, originalData[editingIndex], { text: text, location: scene });
   } else if(editingIndex >= 0){
     // no original backing object - just update runtime array
     quests[editingIndex] = questObj;
   } else {
-    // new entry: push to both arrays (originalData will hold a minimal object so export includes it)
+    // new entry
     quests.push(questObj);
     originalData.push({ text: text, location: scene });
   }
 
-  // after save: remove temp marker and redraw permanent markers (non-draggable)
+  // 2) Render neu (DOM + Marker)
   clearTempSceneMarker();
-  renderList(); drawAllMarkers(); resetForm();
+  renderList();
+  drawAllMarkers();
+
+  // 3) Merke, wohin wir springen wollen (vor resetForm)
+  const savedIndex = (editingIndex >= 0) ? editingIndex : (quests.length - 1);
+
+  // 4) Warte kurz bis DOM komplett gerendert ist, dann scrollen + highlight
+  requestAnimationFrame(() => {
+    // 50ms ist ein sicherer Wert für die meisten Browser; bei sehr langen Listen kann man erhöhen
+    setTimeout(() => {
+      const el = document.querySelector('.quest-item[data-index="'+savedIndex+'"]');
+      if(el){
+        // sanft zentrieren in der scrollbaren Ancestor (meist .sidebar)
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // kurz hervorheben
+        el.classList.add('flash');
+        // optional: fokusieren für a11y (tabindex setzen kurz)
+        el.setAttribute('tabindex','-1');
+        el.focus({ preventScroll: true });
+
+        // Highlight entfernen
+        setTimeout(()=> {
+          el.classList.remove('flash');
+          // optional: tabindex entfernen wieder
+          el.removeAttribute('tabindex');
+        }, 1200);
+      } else {
+        // Debug: falls das Element nicht gefunden wird, logge Infos
+        console.warn('Scroll target not found for index', savedIndex, 'quests.length', quests.length);
+      }
+
+      // 5) Formular zurücksetzen (erst NACH dem Scroll-Aufruf)
+      resetForm();
+
+    }, 50);
+  });
 });
+
 
 
 // new quest
@@ -361,6 +406,68 @@ document.getElementById('fileInput').addEventListener('change', (ev)=>{
   };
   reader.readAsText(f);
 });
+
+// optional: verhindert das native Browser-Kontextmenü auf der Karte
+map.getContainer().addEventListener('contextmenu', e => e.preventDefault());
+
+// temporäre Handles für Marker + Timeout
+let tmpRightClickMarker = null;
+let tmpRightClickTimeout = null;
+
+map.on('contextmenu', async (e) => {
+  const lat = e.latlng.lat.toFixed(5);
+  const lng = e.latlng.lng.toFixed(5);
+  const coordText = `${lat}, ${lng}`;
+
+  // Copy to clipboard (Clipboard API mit Fallback)
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(coordText);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = coordText;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  } catch (err) {
+    console.warn('Kopieren fehlgeschlagen', err);
+  }
+
+  // Wenn schon ein temporärer Marker existiert: entferne ihn und clear den Timeout
+  if (tmpRightClickMarker) {
+    try { map.removeLayer(tmpRightClickMarker); } catch (ignore) {}
+    tmpRightClickMarker = null;
+  }
+  if (tmpRightClickTimeout) {
+    clearTimeout(tmpRightClickTimeout);
+    tmpRightClickTimeout = null;
+  }
+
+  // Neuen Marker mit Tooltip erzeugen (zeigt auch die Kopier-Bestätigung)
+  tmpRightClickMarker = L.marker(e.latlng, { interactive: false }).addTo(map);
+  tmpRightClickMarker.bindTooltip(`${coordText}`, {
+    permanent: false,
+    direction: 'top',
+    offset: [0, -10],
+    className: 'leaflet-temp-tooltip' // optional für eigenes Styling
+  }).openTooltip();
+
+  // neuen 3-Sekunden-Timer starten; wenn innerhalb der Zeit neu geklickt wird,
+  // wird dieser Timeout oben gecleart und neu gesetzt (=> Countdown resettet)
+  tmpRightClickTimeout = setTimeout(() => {
+    if (tmpRightClickMarker) {
+      try { map.removeLayer(tmpRightClickMarker); } catch (ignore) {}
+      tmpRightClickMarker = null;
+    }
+    tmpRightClickTimeout = null;
+  }, 3000);
+});
+
+
 
 // initial render
 renderList();

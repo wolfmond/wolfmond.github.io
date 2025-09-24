@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-24_05.45
+Current Version: 2025-09-24_13.44
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -240,7 +240,8 @@ function flashMessage(txt){
 }
 
 let boostActive = false;
-const BOOST_MULT = 2.5;
+const BOOST_MULT = 20.5;
+const BOOST_ACCEL_MULT = 6; // beim Boost wir die Beschleunigung um den Faktor 6 erhöht (anpassen)
 
 // --- Eingabe ---
 const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
@@ -742,6 +743,20 @@ function animate(ts){
     const windRad = toRad(wind.dir || 0);
     const wind_v_n = windSpeedNow * Math.cos(windRad);
     const wind_v_e = windSpeedNow * Math.sin(windRad);
+	
+	const helRad = toRad(headingDeg);
+
+	// Windkomponente entlang der Flugrichtung (positiv = Tailwind)
+	const windAlongHeading = wind_v_n * Math.cos(helRad) + wind_v_e * Math.sin(helRad);
+
+	// Kopfwind-Magnitude (positiv wenn Gegenwind)
+	const headwind = Math.max(0, -windAlongHeading);
+
+	// penalty: 1.0 = keine Einschränkung, minimaler Faktor z.B. 0.4
+	const HEADWIND_SCALE = 30; // anpassbar
+	const MIN_PENALTY = 0.4;
+	const headwindPenaltyFactor = (headwind > 0) ? Math.max(MIN_PENALTY, 1 - headwind / HEADWIND_SCALE) : 1.0;
+
 
     // --- preset / boost decision (boost disabled if wind too strong) ---
     const preset = (typeof GEARS[currentGear] === 'number') ? GEARS[currentGear] : (MAX_SPEED || 0);
@@ -750,7 +765,7 @@ function animate(ts){
       const target = (questState === 'toScene') ? currentQuest.location : (currentQuest.hospital && currentQuest.hospital.location);
       if(target){
         const distToTarget = distanceMetersBetween(carPos, target);
-        allowBoost = distToTarget > 20000;
+        allowBoost = distToTarget > 200;
       }
     }
     if(windSpeedNow > BOOST_WIND_LIMIT) allowBoost = false;
@@ -769,24 +784,13 @@ function animate(ts){
       if(since < 0.25) agility = 1.6;
     }
 
-    // --- Headwind penalty ---
-    const helRad = toRad(headingDeg);
-    const air_v_n = speed * Math.cos(helRad);
-    const air_v_e = speed * Math.sin(helRad);
-    const windMag = Math.sqrt(wind_v_n*wind_v_n + wind_v_e*wind_v_e);
-    let headwindComponent = 0;
-    if(windMag > 1e-6){
-      headwindComponent = (air_v_n * wind_v_n + air_v_e * wind_v_e) / windMag;
-    }
-    const headwind = -headwindComponent; // positive = headwind
-    const headwindPenaltyFactor = (headwind > 0) ? Math.max(0.4, 1 - headwind / 30) : 1.0;
-
     // desired airspeed
     const desired = effectiveMax * throttleInput;
 
     // acceleration limited approach (prevent jump when shifting gear)
     const delta = desired - speed;
-    const accelCap = ACCEL * headwindPenaltyFactor * agility * dt;
+    const accelBase = (boostActive && allowBoost) ? (ACCEL * BOOST_ACCEL_MULT) : ACCEL;
+	const accelCap = accelBase * headwindPenaltyFactor * agility * dt;
     let dv = 0;
     if(delta > 0){
       dv = Math.min(delta, accelCap);
@@ -796,14 +800,16 @@ function animate(ts){
     speed += dv;
 
     // passive drag + friction applied to airspeed
-    const DRAG_COEFF = 0.0008;
-    if(Math.abs(speed) > 0.0001){
-      const dragDecel = DRAG_COEFF * speed * Math.abs(speed);
-      const linearDecel = FRICTION;
-      const totalDecel = (dragDecel + linearDecel) * dt;
-      if(speed > 0) speed = (speed - totalDecel > 0) ? speed - totalDecel : 0;
-      else speed = (speed + totalDecel < 0) ? speed + totalDecel : 0;
-    }
+	// passive drag + friction applied to airspeed
+	// deutlich kleinere Drag-Konstante, sonst übersteigt quadratic drag den Antrieb bei hohen Geschw.
+	const DRAG_COEFF = 1e-5; // vorher 0.0008 — zu groß für v^2-Term
+	if(Math.abs(speed) > 0.0001){
+	  const dragDecel = DRAG_COEFF * speed * Math.abs(speed);
+	  const linearDecel = FRICTION;
+	  const totalDecel = (dragDecel + linearDecel) * dt;
+	  if(speed > 0) speed = (speed - totalDecel > 0) ? speed - totalDecel : 0;
+	  else speed = (speed + totalDecel < 0) ? speed + totalDecel : 0;
+	}
 
     if(keys.ArrowDown && speed > 0){
       speed = Math.max(0, speed - (BRAKE_DECEL * 0.5) * dt);
@@ -837,7 +843,7 @@ function animate(ts){
 
   // HUD: show preset and boost availability
   const presetNow = (typeof GEARS[currentGear] === 'number') ? GEARS[currentGear] : (MAX_SPEED || 0);
-  const canBoostNow = boostActive && currentQuest && distanceMetersBetween(carPos, ((questState === 'toScene')? currentQuest.location : currentQuest.hospital.location)) > 20000 && getCurrentWindSpeed() <= BOOST_WIND_LIMIT;
+  const canBoostNow = boostActive && currentQuest && distanceMetersBetween(carPos, ((questState === 'toScene')? currentQuest.location : currentQuest.hospital.location)) > 200 && getCurrentWindSpeed() <= BOOST_WIND_LIMIT;
   document.getElementById('maxSpeed').textContent = Math.round(presetNow * (canBoostNow ? BOOST_MULT : 1));
 
   // display speed, UI and checks

@@ -142,8 +142,8 @@
   {
     "text": "Schweres Asthma beim Kind auf einem abgelegenen Bauernhof; schneller Lufttransport nötig.",
     "location": [
-      53.144026,
-      8.211016
+      53.22975456972756,
+      8.319190092197362
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -154,10 +154,10 @@
     }
   },
   {
-    "text": "Schwerer Sturz von einer Pferdekutsche bei Pferderennenveranstaltung auf dem Fliegerdeich.",
+    "text": "Schwerer Sturz von einer Pferdekutsche bei Pferderennenveranstaltung.",
     "location": [
-      53.144026,
-      8.211016
+      53.1403112102473,
+      8.062209103487454
     ],
     "hospital": {
       "name": "Pius-Hospital",
@@ -168,10 +168,10 @@
     }
   },
   {
-    "text": "Akute Blutung nach Schussverletzung (fiktiv) auf einem Industriegelände — sofortiger Transport.",
+    "text": "Akute Blutung nach Schussverletzung auf einem Industriegelände — sofortiger Transport.",
     "location": [
-      53.144026,
-      8.211016
+      53.14612,
+      8.25963
     ],
     "hospital": {
       "name": "Klinikum Oldenburg AöR",
@@ -184,8 +184,8 @@
   {
     "text": "Chemikalienfreisetzung in einer Lagerhalle; Patient mit Inhalationsschäden.",
     "location": [
-      53.144026,
-      8.211016
+      53.18312213854947,
+      8.235117443717217
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -196,10 +196,10 @@
     }
   },
   {
-    "text": "Hochbetagte Person mit Schlaganfall in einem weit abgelegenen Pflegeheim.",
+    "text": "Hochbetagte Person mit Schlaganfall in einem Pflegeheim.",
     "location": [
-      53.144026,
-      8.211016
+      53.08522588770956,
+      8.228196859570554
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -212,8 +212,8 @@
   {
     "text": "Helikoptertransfer eines Neugeborenen mit angeborener Herzfehlbildung ins Spezialklinikum.",
     "location": [
-      53.144026,
-      8.211016
+      53.15468,
+      8.17477
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -226,8 +226,8 @@
   {
     "text": "Massenpanik bei Konzert auf dem Freigelände; mehrere Traumata und Schnittverletzungen.",
     "location": [
-      53.144026,
-      8.211016
+      53.12033,
+      8.22871
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -240,8 +240,8 @@
   {
     "text": "Einsturz einer Lagerhalle mit Verschütteten in Wechloy.",
     "location": [
-      53.144026,
-      8.211016
+      53.15929,
+      8.17628
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -254,8 +254,8 @@
   {
     "text": "Schwerer Fahrradsturz am Haarenufer mit spinaler Verletzung vermutet.",
     "location": [
-      53.144026,
-      8.211016
+      53.14159,
+      8.20198
     ],
     "hospital": {
       "name": "Pius-Hospital",
@@ -268,8 +268,8 @@
   {
     "text": "Binnenschiff kollidiert mit Brückenpfeiler; Besatzungsmitglied eingeklemmt.",
     "location": [
-      53.144026,
-      8.211016
+      53.13966,
+      8.23422
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -282,8 +282,8 @@
   {
     "text": "Gasaustritt in Wohnhaus; mehrere Anwohner bewusstlos.",
     "location": [
-      53.144026,
-      8.211016
+      53.15737,
+      8.21312
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -296,8 +296,8 @@
   {
     "text": "Brandausbruch in Pflegeheim; Evakuierung per Hubschrauber für kritisch Kranke.",
     "location": [
-      53.144026,
-      8.211016
+      53.18781,
+      8.21247
     ],
     "hospital": {
       "name": "Klinikum Oldenburg AöR",
@@ -310,8 +310,8 @@
   {
     "text": "Verschüttung in einem Silo; Arbeiter atmet giftige Stäube ein.",
     "location": [
-      53.144026,
-      8.211016
+      53.14177,
+      8.24
     ],
     "hospital": {
       "name": "Klinikum Oldenburg AöR",
@@ -324,8 +324,8 @@
   {
     "text": "Lebensbedrohliche allergische Reaktion (anaphylaktischer Schock) in einer ländlichen Gemeinde.",
     "location": [
-      53.144026,
-      8.211016
+      53.08748,
+      8.12057
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -338,8 +338,8 @@
   {
     "text": "Hochrisiko-Geburt auf einem Frachtschiff im Hafen — schneller Lufttransport nötig.",
     "location": [
-      53.144026,
-      8.211016
+      53.14066,
+      8.22671
     ],
     "hospital": {
       "name": "Pius-Hospital",
