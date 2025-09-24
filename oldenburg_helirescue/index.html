@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-24_13.48
+Current Version: 2025-09-24_16.22
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -593,6 +593,7 @@ function loadQuests(path = 'quests.json'){
     // final: nimm bis zu NUM_QUESTS (wird durch `limited` automatisch begrenzt)
     quests = shuffled.slice(0, Math.min(NUM_QUESTS, shuffled.length));
     currentQuestIndex = -1;
+	console.log('Quests loaded:', quests.length, quests);
     startNextQuest();
   });
 }
@@ -620,7 +621,7 @@ function startNextQuest(){
   
   const weathers = ['dunst']; 
 weather = weathers[Math.floor(Math.random()*weathers.length)];
-console.log(weather);
+//console.log(weather);
 applyWeatherVisuals(weather, map);
 
   // set per-quest wind (playable)
