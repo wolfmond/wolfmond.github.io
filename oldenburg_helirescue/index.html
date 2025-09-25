@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-25_14.44
+Current Version: 2025-09-25_16.43
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -39,14 +39,15 @@ For more information, please refer to <https://unlicense.org/>
 <script>
 
 const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use.  No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
-/*
+
 if (!confirm(message)) window.location.href = "about:blank";
 alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Einsätze zugewiesen. Du bringst Verunfallte zum Krankenhaus.');
 alert('ℹ\nSteuerung\nBild ↑ : hoch fliegen\nBild ↓ : runter fliegen\n1-7 : Geschwindigkeit\n ←↑↓→ : Heli Steuern');
 alert('ℹ\nLande in den markierten Kreisen. Landen (Bild ↓) geht erst, wenn du nicht mehr fliegst.');
 alert('ℹ\nStarte zu deinem ersten Einsatz. Halte Bild ↑ gedrückt, um vom Boden abzuheben.');
 alert('ℹ\nViel Glück 🍀.');
-*/
+alert('ℹ\n Ach, und noch etwas: Tanken kannst du im Hangar. Lande im Hangar, dann wirst du betankt. 🍀.');
+
 </script>
 <style>
   html,body,#map{height:100%;margin:0;padding:0;font-family:system-ui,Arial,sans-serif;cursor:none;}
@@ -229,7 +230,8 @@ const FUEL_CONFIG = {
 
 // --- Neue, einfache Range-basierte Einstellung ---
 // wie viele Kilometer schafft ein voller Tank (100%) wenn nur Distanz zählt
-const RANGE_KM = 50; // <-- hier anpassen: z.B. 50 km pro Tank
+let RANGE_KM = 50; // funktioniert noch nicht ganz, deswegen...
+RANGE_KM = RANGE_KM*2; // ... wird es hier für das Gameplay verändert.
 
 // Minimaler Treibstoff zum Starten (in %)
 const MIN_FUEL_TO_LAUNCH = 3;
@@ -283,7 +285,7 @@ map.keyboard.disable();
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom:19,
-  attribution: '&copy; OpenStreetMap contributors',
+  attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>',
   keepBuffer: 2,
   updateWhenZooming: true,
   reuseTiles: true
