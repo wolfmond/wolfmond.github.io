@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-25_22.16
+Current Version: 2025-09-25_22.30
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -1982,6 +1982,87 @@ try {
     },
     "--map-sepia": {
       "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-gray": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-blur": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-x": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-y": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-blur": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-color": {
+      "value": "#000000",
+      "suffix": "",
+      "type": "color"
+    },
+    "undefined": {
+      "value": "",
+      "suffix": "",
+      "type": "file"
+    }
+  }
+};
+
+	applyFilterFromJson(presetJson);
+	
+	} catch (err) {
+		console.error('night error', err);
+		alert('Fehler beim Aktivieren von Night-Mode: ' + (err && err.message ? err.message : err));
+	}
+},
+
+'wintermap': () => {
+  try {
+	const presetJson = {
+  "created": "2025-09-25T20:26:18.956Z",
+  "state": {
+    "--map-hue": {
+      "value": "128",
+      "suffix": "deg",
+      "type": "range"
+    },
+    "--map-sat": {
+      "value": "0.9",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-contrast": {
+      "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-bright": {
+      "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-invert": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-sepia": {
+      "value": "0",
       "suffix": "",
       "type": "range"
     },
