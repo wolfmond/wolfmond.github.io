@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-25_16.43
+Current Version: 2025-09-25_22.16
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -40,13 +40,15 @@ For more information, please refer to <https://unlicense.org/>
 
 const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use.  No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
 
+
 if (!confirm(message)) window.location.href = "about:blank";
 alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Einsätze zugewiesen. Du bringst Verunfallte zum Krankenhaus.');
 alert('ℹ\nSteuerung\nBild ↑ : hoch fliegen\nBild ↓ : runter fliegen\n1-7 : Geschwindigkeit\n ←↑↓→ : Heli Steuern');
 alert('ℹ\nLande in den markierten Kreisen. Landen (Bild ↓) geht erst, wenn du nicht mehr fliegst.');
 alert('ℹ\nStarte zu deinem ersten Einsatz. Halte Bild ↑ gedrückt, um vom Boden abzuheben.');
 alert('ℹ\nViel Glück 🍀.');
-alert('ℹ\n Ach, und noch etwas: Tanken kannst du im Hangar. Lande im Hangar, dann wirst du betankt. 🍀.');
+alert('ℹ\n Ach, und noch etwas: Tanken kannst du im Hangar. Lande im Hangar, dann wird der Heli betankt. 🍀.');
+
 
 </script>
 <style>
@@ -97,13 +99,17 @@ alert('ℹ\n Ach, und noch etwas: Tanken kannst du im Hangar. Lande im Hangar, d
   
   .big-h-icon { display: block; line-height: 0; }
   
-  .leaflet-container .leaflet-tile {
-  filter: hue-rotate(var(--map-hue, 0deg))
-          saturate(var(--map-sat, 1))
-          contrast(1)
-          brightness(1)
-          invert(0);
-  transition: filter 700ms ease; /* sanfter Übergang bei Änderung */
+.leaflet-container .leaflet-tile {
+	filter: hue-rotate(var(--map-hue, 0deg))
+	saturate(var(--map-sat, 1))
+	contrast(var(--map-contrast, 1))
+	brightness(var(--map-bright, 1))
+	invert(var(--map-invert, 0))
+	sepia(var(--map-sepia, 0))
+	grayscale(var(--map-gray, 0))
+	blur(var(--map-blur, 0px))
+	drop-shadow(var(--map-shadow-x,0px) var(--map-shadow-y,0px) var(--map-shadow-blur,0px) var(--map-shadow-color,transparent));
+	transition: filter 400ms ease;
 }
 
  #cheat-console {
@@ -1597,7 +1603,17 @@ map.whenReady(()=>{
 </script>
 
 <script>
-
+function applyFilterFromJson(jsonObj) {
+	if (!jsonObj || !jsonObj.state) return;
+	for (const [variable, cfg] of Object.entries(jsonObj.state)) {
+	if (!variable || !cfg) continue;
+	let value = cfg.value || '';
+	if (cfg.suffix) {
+	value += cfg.suffix;
+	}
+	document.documentElement.style.setProperty(variable, value);
+	}
+}
 /*
 
 CHEATS
@@ -1608,6 +1624,12 @@ CHEATS
 	nostress: disables quests
 	imthewinner: congratulations, you've won all the quests.
 	imtherocketman: you can fly as high as you like. The higher you fly, the faster you go.
+	
+	// Colors
+	
+	nightmap: the map is colored in nightvision
+	oldmap: the map is colored like an old map
+	resetcolors:  resets the colors of the map
 
 */
 
@@ -1897,8 +1919,201 @@ try {
 },
 
 
+// Farben 
 
-}
+'nightmap': () => {
+  try {
+	const presetJson = {
+		"created": "2025-09-25T19:34:29.048Z",
+		"state": {
+		"--map-hue": { "value": "314", "suffix": "deg", "type": "range" },
+		"--map-sat": { "value": "1.5", "suffix": "", "type": "range" },
+		"--map-contrast": { "value": "0.8", "suffix": "", "type": "range" },
+		"--map-bright": { "value": "1.1", "suffix": "", "type": "range" },
+		"--map-invert": { "value": "1", "suffix": "", "type": "range" },
+		"--map-sepia": { "value": "0", "suffix": "", "type": "range" },
+		"--map-gray": { "value": "0", "suffix": "", "type": "range" },
+		"--map-blur": { "value": "0", "suffix": "px", "type": "range" },
+		"--map-shadow-x": { "value": "0", "suffix": "px", "type": "range" },
+		"--map-shadow-y": { "value": "0", "suffix": "px", "type": "range" },
+		"--map-shadow-blur": { "value": "0", "suffix": "px", "type": "range" },
+		"--map-shadow-color": { "value": "#416fb4", "suffix": "", "type": "color" },
+		"undefined": { "value": "", "suffix": "", "type": "file" }
+		}
+	};
+
+	applyFilterFromJson(presetJson);
+	
+	} catch (err) {
+		console.error('night error', err);
+		alert('Fehler beim Aktivieren von Night-Mode: ' + (err && err.message ? err.message : err));
+	}
+},
+
+'oldmap': () => {
+  try {
+	const presetJson = {
+  "created": "2025-09-25T19:14:41.766Z",
+  "state": {
+    "--map-hue": {
+      "value": "45",
+      "suffix": "deg",
+      "type": "range"
+    },
+    "--map-sat": {
+      "value": "4",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-contrast": {
+      "value": "0.8",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-bright": {
+      "value": "0.7",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-invert": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-sepia": {
+      "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-gray": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-blur": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-x": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-y": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-blur": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-color": {
+      "value": "#000000",
+      "suffix": "",
+      "type": "color"
+    },
+    "undefined": {
+      "value": "",
+      "suffix": "",
+      "type": "file"
+    }
+  }
+};
+
+	applyFilterFromJson(presetJson);
+	
+	} catch (err) {
+		console.error('night error', err);
+		alert('Fehler beim Aktivieren von Night-Mode: ' + (err && err.message ? err.message : err));
+	}
+},
+
+'resetcolors': () => {
+  try {
+	const presetJson = {
+  "created": "2025-09-25T19:58:57.202Z",
+  "state": {
+    "--map-hue": {
+      "value": "0",
+      "suffix": "deg",
+      "type": "range"
+    },
+    "--map-sat": {
+      "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-contrast": {
+      "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-bright": {
+      "value": "1",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-invert": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-sepia": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-gray": {
+      "value": "0",
+      "suffix": "",
+      "type": "range"
+    },
+    "--map-blur": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-x": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-y": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-blur": {
+      "value": "0",
+      "suffix": "px",
+      "type": "range"
+    },
+    "--map-shadow-color": {
+      "value": "#000000",
+      "suffix": "",
+      "type": "color"
+    },
+    "undefined": {
+      "value": "",
+      "suffix": "",
+      "type": "file"
+    }
+  }
+};
+
+	applyFilterFromJson(presetJson);
+	
+	} catch (err) {
+		console.error('night error', err);
+		alert('Fehler beim Aktivieren von Night-Mode: ' + (err && err.message ? err.message : err));
+	}
+},
+  
+
+} // end of cheats
 
   window.addEventListener('keydown', (e) => {
     const active = document.activeElement;
@@ -1926,6 +2141,8 @@ try {
   function appendLog(text){ const node=document.createElement('div'); node.textContent=text; logEl.appendChild(node); }
   hideConsole();
 })();
+
+
 </script>
 </body>
 </html>
