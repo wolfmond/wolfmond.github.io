@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-24_16.22
+Current Version: 2025-09-25_03.55
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -38,19 +38,48 @@ For more information, please refer to <https://unlicense.org/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script>
 const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use.  No Warranties. Use this software at your own risk. This website can be played with arrow keys on your keyboard on a Laptop/PC. Tested with Chrome & Brave. In my Tests: Runs best in Chrome Browser. Language (yet): GERMAN";
+
+/*
 if (!confirm(message)) window.location.href = "about:blank";
 alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Einsätze zugewiesen. Du bringst Verunfallte zum Krankenhaus.');
  alert('ℹ\nSteuerung\nBild ↑ : hoch fliegen\nBild ↓ : runter fliegen\n1-7 : Geschwindigkeit\n ←↑↓→ : Heli Steuern');
   alert('ℹ\nLande in den markierten Kreisen. Landen (Bild ↓) geht erst, wenn du nicht mehr fliegst.');
   alert('ℹ\nStarte zu deinem ersten Einsatz. Halte Bild ↑ gedrückt, um vom Boden abzuheben.');
   alert('ℹ\nViel Glück 🍀.');
+  
+  */
  
 </script>
 <style>
-  html,body,#map{height:100%;margin:0;padding:0;font-family:system-ui,Arial,sans-serif}
+  html,body,#map{height:100%;margin:0;padding:0;font-family:system-ui,Arial,sans-serif;cursor:none;}
   #map{background:#e7eef8}
-  .car-center{position:absolute;z-index:12000;left:50%;top:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 25%,#9f3cff,#280032);border:3px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;pointer-events:none}
-  .car-center svg{width:62%;height:62%}
+  .heli-center{  position: absolute;
+  z-index: 12000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+
+  /* radial so, dass er bis zur Kreis-Kante geht und nur einmal auftaucht */
+  background: radial-gradient(circle closest-side at 50% 50%, 
+                             rgba(159, 60, 255, 0.5) 0%, 
+                             rgba(40, 0, 50, 0.5) 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+
+  /* verhindert, dass Hintergrund unter der Border sichtbar wird */
+  background-clip: padding-box;
+
+  border: 3px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+  .heli-center svg{width:62%;height:62%}
   .hud{position:fixed;left:12px;top:12px;z-index:14000;background:rgba(255,255,255,0.95);padding:10px 12px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-weight:700}
   .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:14000;background:rgba(255,255,255,0.9);padding:8px 12px;border-radius:8px;font-weight:600;display:none;}
   .status{font-weight:800;color:#7a00ff;margin-left:8px; display:none;}
@@ -63,8 +92,11 @@ alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Ei
   
   #zoomLevel {display:none;}
   
-      .big-h-icon { display: block; line-height: 0; }
-
+  .konsolentext {flex:0 0 80px; text-align:right; font-size:14px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'DejaVu Sans Mono', monospace; font-variant-numeric: tabular-nums;}
+  
+  .left {text-align:left;}
+  
+  .big-h-icon { display: block; line-height: 0; }
   
   .leaflet-container .leaflet-tile {
   filter: hue-rotate(var(--map-hue, 0deg))
@@ -79,13 +111,41 @@ alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Ei
 <body>
 <div id="map"></div>
 
-<div class="car-center" id="carDiv" title="Dein magisches Flugauto">
-  <svg viewBox="0 0 100 100" aria-hidden="true">
-    <polygon points="50,8 86,86 14,86" fill="#ff9ee7" stroke="rgba(255,255,255,0.12)" stroke-width="3" stroke-linejoin="round" />
-  </svg>
+<div class="heli-center" id="heliDiv" title="Heli">
+<svg
+   width="19.649965mm"
+   height="21.987007mm"
+   viewBox="0 0 19.649965 21.987007"
+   version="1.1"
+   id="svg5"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <g
+     id="layer1"
+     transform="translate(-97.537749,-87.877705)">
+    <polygon
+       points="86,86 14,86 50,8 "
+       fill="#ff9ee7"
+       stroke="rgba(255,255,255,0.12)"
+       stroke-width="3"
+       stroke-linejoin="round"
+       id="polygon9"
+       transform="matrix(0.26458333,0,0,0.26458333,94.133566,86.810546)"
+       style="fill:#ff9ee7;fill-opacity:1;stroke:#000000;stroke-width:2.26772;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;opacity:0.8" />
+    <circle
+       style="fill:#ff9ee7;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:29.7449;stroke-opacity:1;paint-order:stroke fill markers;opacity:0.8"
+       id="path40"
+       cx="107.36273"
+       cy="89.179474"
+       r="0.80176884" />
+  </g>
+</svg>
+
 </div>
 
-<div class="hud" id="hud">Speed: <span id="speed">0.0</span> m/s — Max: <span id="maxSpeed">30</span> m/s <span id="zoomLevel">17</span> <span class="status" id="landState"></span></div>
+<div class="hud konsolentext" id="hud">Speed: <span id="speed">0.0</span> m/s — Max: <span id="maxSpeed">30</span> m/s <span id="zoomLevel">17</span> <span class="status" id="landState"></span></div>
 <div class="hint">Steuerung: Pfeiltasten = lenken / Gas / Bremse • 1–9 = Max Speed • Leertaste = Pause • Bild↑/Bild↓ = Höhe ändern (14–18 beim Flug, 19 = Landen wenn gestoppt). Bei Landung werden Bewegung/Lenkung deaktiviert — Bild↑ (PageUp) bleibt aktiv, damit du wieder steigen (take-off) kannst.</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -93,7 +153,7 @@ alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Ei
 // --- Konfiguration ---
 const STARTPOS = [53.137181, 8.255045];
 let ZOOM = 19; // initial (start in landed view)
-const ZOOM_MIN = 14;
+const ZOOM_MIN = 15;
 const ZOOM_MAX_SAFE = 18;
 const ZOOM_LAND = 19;
 
@@ -110,9 +170,41 @@ const BRAKE_DECEL = 6; // m/s^2
 
 // --- Wind (pro Quest) ---
 let wind = { speed:0, dir:0, gustAmp:0, gustFreq:0, seed:0 };
-const MAX_WIND = 0.5;
+const MAX_WIND = 0.1;
 const BOOST_WIND_LIMIT = 12;
 const LAND_WIND_MAX = 3;
+
+
+// --- Fuel System (einfügen nach "// --- Fahrzeugzustand ---") ---
+const MAX_FUEL = 100;            // in Prozent
+let fuel = MAX_FUEL;             // aktueller Treibstoff (Prozent)
+let fuelPercent = Math.ceil(fuel);
+let outOfFuel = false;           // true wenn Motor komplett ausgefallen
+
+// Tunable Einstellungen (bleiben wie gewünscht)
+const FUEL_CONFIG = {
+  base: 0.1,       // %/s Grundverbrauch (Motor an, Leerlauf)
+  throttle: 0.18,  // zusätzlicher %/s wenn voller Schub (throttleInput==1)
+  speed: 0.002,    // alte speed-Komponente (wird ignoriert zugunsten RANGE_KM, kann 0 bleiben)
+  boost: 0.0       // extra %/s wenn Boost aktiv
+};
+
+// --- Neue, einfache Range-basierte Einstellung ---
+// wie viele Kilometer schafft ein voller Tank (100%) wenn nur Distanz zählt
+const RANGE_KM = 50; // <-- hier anpassen: z.B. 50 km pro Tank
+
+// Minimaler Treibstoff zum Starten (in %)
+const MIN_FUEL_TO_LAUNCH = 3;
+
+// --- Hangar / Refuel Config (nach Fuel-Variablen) ---
+const HANGAR_RADIUS = 20; // Meter
+let hangarCircle = null;  // Leaflet circle instance
+let refueling = false;    // true während Betankung
+let controlsDisabled = false; // deaktiviert Tastatureingaben während Betankung
+let refuelSavedQuestText = null; // Questtext sichern vor Betankung
+
+const REFUEL_RATE = 2.56267; // % pro Sekunde (bei 25 => ~4s von 0->100)
+
 
 let _prevNavDist = '';
 let _prevNavWind = '';
@@ -194,13 +286,46 @@ map.eachLayer(layer=>{ if(layer instanceof L.TileLayer){
     // Marker mit dem Icon
     L.marker(hangar, { icon }).addTo(map);
 
-    // Optional: auch einen Kreis als Leaflet-Layer (z.B. Interaktion / Tooltip)
+    // --- Hangar Circle: sichtbar nur auf Zoom 19 ---
+function createHangarCircle(){
+  // style: halb-rot (fill transparent-ish)
+hangarCircle = L.circle(hangar, {
+  radius: HANGAR_RADIUS,
+  color: '#b41414',     // Randfarbe (ohne Alpha)
+  opacity: 0.95,        // Transparenz für den Rand
+  weight: 2,            // Randdicke
+  fillColor: '#b41414', // Füllfarbe (ohne Alpha)
+  fillOpacity: 0.52,    // Transparenz für die Füllung
+  interactive: false
+}).addTo(map);
+
+  // initial visibility (nur bei Landen-Zoom)
+  updateHangarVisibility();
+
+  // bei Zoom-Änderungen anpassen
+  map.on('zoomend', updateHangarVisibility);
+}
+
+function updateHangarVisibility(){
+  if(!hangarCircle) return;
+  const z = Math.round(map.getZoom());
+  if(z === ZOOM_LAND){ // 19
+    hangarCircle.setStyle({opacity:1, fillOpacity:0.12});
+  } else {
+    // 'ausblenden' durch 0-Opacity (bleibt im Layer)
+    hangarCircle.setStyle({opacity:0, fillOpacity:0});
+  }
+}
+
+// Erzeuge die Anzeige (aufrufen nachdem 'hangar' definiert und map initialisiert ist)
+createHangarCircle();
+
      
 	
 
 
 // --- Fahrzeugzustand ---
-let carPos = L.latLng(STARTPOS[0], STARTPOS[1]);
+let heliPos = L.latLng(STARTPOS[0], STARTPOS[1]);
 let headingDeg = 0; // 0 = Norden
 let speed = 0; // AIRSPEED in m/s (pilot-set)
 let paused = true;
@@ -215,7 +340,7 @@ function suspendAutoPanUntilZoomEnd(){
     if(!autoPanSuspended) return;
     autoPanSuspended = false;
     if(pendingAutoPan){
-      map.panTo(carPos, {animate:false});
+      map.panTo(heliPos, {animate:false});
       pendingAutoPan = false;
     }
     updateZoomUI();
@@ -225,7 +350,12 @@ function suspendAutoPanUntilZoomEnd(){
   map.once('moveend', handler);
 }
 
-function degToCompass(deg){
+function degToCompass(deg, opts = {}) {
+  // opts.from = true -> interpretiere deg als "to"-bearing und gib "from"-Kompass zurück
+  if (typeof deg !== 'number') deg = 0;
+  if (opts.from) {
+    deg = (deg + 180) % 360;
+  }
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const ix = Math.floor(((deg + 11.25) % 360) / 22.5);
   return dirs[ix];
@@ -247,6 +377,11 @@ const BOOST_ACCEL_MULT = 6; // beim Boost wir die Beschleunigung um den Faktor 6
 const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false };
 document.addEventListener('keydown', (e)=>{
   if((e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA')) ) return;
+  if(controlsDisabled){
+    // verhindern, dass Tasten Aktionen auslösen (inkl. PageUp)
+    e.preventDefault();
+    return;
+  }
   if(e.key === 'Shift') boostActive = true;
   if(e.key === ' ') { e.preventDefault(); paused = !paused; return; }
 
@@ -281,24 +416,36 @@ document.addEventListener('keyup', (e)=>{
 // --- Altitude / Zoom-Logik ---
 function startFlyToZoom(targetZoom, duration = 0.36){
   suspendAutoPanUntilZoomEnd();
-  map.flyTo(carPos, targetZoom, { animate: true, duration: duration, easeLinearity: 0.25 });
+  map.flyTo(heliPos, targetZoom, { animate: true, duration: duration, easeLinearity: 0.25 });
 }
 function isLanded(){
   return Math.round(map.getZoom()) === ZOOM_LAND;
 }
 
 function handleAltitudeKey(isPageUp){
-  const cur = map.getZoom();
-
-  if(isLanded()){
-    if(isPageUp){
-      // take-off
-      startFlyToZoom(ZOOM_MAX_SAFE, 0.45);
-      paused = false;
-      updateZoomUI();
-    }
+  if(controlsDisabled){
+    flashMessage('Steuerung deaktiviert während Betankung');
     return;
   }
+
+  const cur = map.getZoom();
+
+if(isLanded()){
+      if(isPageUp){
+        // prevent takeoff when not enough fuel
+        if(fuel <= MIN_FUEL_TO_LAUNCH || outOfFuel){
+          //flashMessage('Zu wenig Treibstoff zum Starten');
+          outOfFuel = true;
+			handleFuelEmptyEmergency('Zu wenig Treibstoff zum Starten. Du brauchst mehr als 3 % Treibstoff, um zu starten. Tanke das nächste mal rechtzeitig; fliege dafür einfach den Hangar an, wo du gestartet bist, und lande dort. Der Heli wird dann betankt.');
+          return;
+        }
+        // take-off
+        startFlyToZoom(ZOOM_MAX_SAFE, 0.45);
+        paused = false;
+        updateZoomUI();
+      }
+      return;
+    }
 
   if(isPageUp){
     if(paused) paused = false;
@@ -393,17 +540,36 @@ let quests = [];
 let currentQuestIndex = -1;
 let currentQuest = null;
 let questState = null;
-
 function createLandingOverlay(latlng, meterRadius = 20, opts = {}){
   const color = opts.color || 'red';
   const strokeWidth = (typeof opts.weight === 'number') ? opts.weight : 2;
   const fillOpacity = (typeof opts.fillOpacity === 'number') ? opts.fillOpacity : 0.12;
-  const pane = map.getPanes().overlayPane;
+
+  // --- ensure a dedicated pane for landing overlays (low z-index) ---
+  // createPane ist idempotent (erstellt nur, wenn noch nicht vorhanden)
+  try{
+    if(!map.getPane('landingPane')){
+      map.createPane('landingPane');
+      // z-index wählen: kleiner als markerPane; Default markerPane ist 600,
+      // overlayPane liegt typischerweise bei 400. Wir setzen landingPane bewusst darunter.
+      map.getPane('landingPane').style.zIndex = 350;
+      // optional: pointer-events none für ganze Pane (wir stellen es auch auf Container)
+      map.getPane('landingPane').style.pointerEvents = 'none';
+    }
+  }catch(e){
+    // fallback: benutze overlayPane, falls createPane nicht verfügbar
+  }
+
+  const pane = map.getPane('landingPane') || map.getPanes().overlayPane;
+
   const container = L.DomUtil.create('div', 'landing-overlay');
   container.style.position = 'absolute';
   container.style.pointerEvents = 'none';
   container.style.transformOrigin = '0 0';
   container.style.willChange = 'transform';
+  // setze expliziten zIndex am Element als weitere Absicherung
+  container.style.zIndex = '1';
+
   pane.appendChild(container);
 
   function metersToPx(meters, centerLatLng) {
@@ -449,6 +615,7 @@ function createLandingOverlay(latlng, meterRadius = 20, opts = {}){
     }
   };
 }
+
 
 // Bearing helper
 function bearingBetween(a, b){
@@ -503,17 +670,18 @@ navBox.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
 navBox.style.display = 'none';
 
 // Layout / fixe Größe
-navBox.style.width = '260px';         // fixe Gesamtbreite (anpassen falls nötig)
+navBox.style.width = '320px';         // fixe Gesamtbreite (anpassen falls nötig)
 navBox.style.boxSizing = 'border-box';
 navBox.style.padding = '8px 10px';
 navBox.style.overflow = 'hidden';
 navBox.style.whiteSpace = 'nowrap';
-navBox.style.fontWeight = '800';
-navBox.style.fontFamily = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial";
+//navBox.style.fontWeight = '800';
+//navBox.style.fontFamily = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial";
 navBox.style.display = 'flex';
 navBox.style.alignItems = 'center';
 navBox.style.gap = '8px';
 navBox.style.transition = 'opacity 120ms linear';
+navBox.classList.add('konsolentext');
 
 // feste Inhalte (feste Flex-Basis / monospace für Zahlen)
 navBox.innerHTML = `
@@ -541,23 +709,91 @@ navArrowSVG = document.getElementById('navArrowSVG');
 navDist = document.getElementById('navDist');
 navWindEl = document.getElementById('navWind');
 
+// --- Quest-Container + "Erledigte Quests"-Box -----------------
+(function ensureQuestContainerAndCompletedBox(){
+  // 1) Container erstellen (falls nicht vorhanden)
+  let qCont = document.getElementById('questContainer');
+  if(!qCont){
+    qCont = document.createElement('div');
+    qCont.id = 'questContainer';
+    Object.assign(qCont.style, {
+      position: 'fixed',
+      left: '12px',
+      top: '64px',
+      zIndex: 14000,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      alignItems: 'flex-start',
+      pointerEvents: 'auto'
+    });
+    document.body.appendChild(qCont);
+  }
+
+  // 2) QuestBox: falls vorhanden, ins Container verschieben; sonst neu erstellen (leicht angepasst)
   let qb = document.getElementById('questBox');
   if(!qb){
     qb = document.createElement('div');
     qb.id = 'questBox';
-    qb.style.position = 'fixed';
-    qb.style.left = '12px';
-    qb.style.top = '64px';
-    qb.style.zIndex = 14000;
-    qb.style.background = 'rgba(255,255,255,0.95)';
-    qb.style.padding = '8px 12px';
-    qb.style.borderRadius = '8px';
-    qb.style.fontWeight = '700';
-    qb.style.maxWidth = '36ch';
-    document.body.appendChild(qb);
+    Object.assign(qb.style, {
+      background: 'rgba(255,255,255,0.95)',
+      padding: '8px 12px',
+      borderRadius: '8px',
+      fontWeight: '700',
+      maxWidth: '36ch',
+      boxSizing: 'border-box',
+	  marginTop: '4px',
+	  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+    });
+    qb.classList.add('konsolentext','left');
+    qCont.appendChild(qb);
+  } else {
+    // falls questBox schon existiert, entferne seine absolute Positionierung (falls vorhanden)
+    qb.style.position = 'relative';
+    qb.style.left = '';
+    qb.style.top = '';
+    // und falls es noch nicht im Container ist, verschieben
+    if(qb.parentElement !== qCont){
+      qCont.appendChild(qb);
+    }
   }
+
+  // 3) Completed Box (neu unter QuestBox)
+  let cb = document.getElementById('completedBox');
+  if(!cb){
+    cb = document.createElement('div');
+    cb.id = 'completedBox';
+    Object.assign(cb.style, {
+      background: 'rgba(255,255,255,0.95)',
+      padding: '6px 10px',
+      borderRadius: '8px',
+      fontWeight: '700',
+      maxWidth: '36ch',
+      fontSize: '13px',
+      color: '#333',
+      boxSizing: 'border-box',
+	  marginTop: '12px',
+	  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+    });
+    qCont.appendChild(cb);
+  } else {
+    if(cb.parentElement !== qCont) qCont.appendChild(cb);
+  }
+
+  // 5) Initiales Update
+  updateCompletedBox(0,0);
+
+  // convenience: export reference
+  window.questContainer = qCont;
+})();
+
+
 }
 
+function updateCompletedBox (i,i2){
+const cbEl = document.getElementById('completedBox');
+  if(cbEl) cbEl.textContent = `Erledigte Quests: ${i} von ${i2}`;
+}
 
 function showNavUI(show){
   navBox.style.display = show ? 'flex' : 'none';
@@ -583,9 +819,10 @@ function loadQuests(path = 'quests.json'){
     ];
   }).then(data=>{
     const NUM_QUESTS = 3;
+	const MAX_QUESTS = 30; // data slicing
 
     // --- LIMITIEREN auf die ersten 8 Einträge VOR dem Shufflen ---
-    const limited = Array.isArray(data) ? data.slice(0, 24) : [];
+    const limited = Array.isArray(data) ? data.slice(0, MAX_QUESTS) : [];
 
     // shuffleArray erwartet ein Array; hier wird das gekürzte Array gemischt
     const shuffled = shuffleArray(limited.slice());
@@ -593,7 +830,7 @@ function loadQuests(path = 'quests.json'){
     // final: nimm bis zu NUM_QUESTS (wird durch `limited` automatisch begrenzt)
     quests = shuffled.slice(0, Math.min(NUM_QUESTS, shuffled.length));
     currentQuestIndex = -1;
-	console.log('Quests loaded:', quests.length, quests);
+	//console.log('Quests loaded:', quests.length, quests);
     startNextQuest();
   });
 }
@@ -603,10 +840,10 @@ function loadQuests(path = 'quests.json'){
 function startNextQuest(){
   if(activeScenePulse){ activeScenePulse.stop(); activeScenePulse = null; }
   if(activeHospitalPulse){ activeHospitalPulse.stop(); activeHospitalPulse = null; }
-  
-  
-
   currentQuestIndex++;
+  
+  updateCompletedBox(currentQuestIndex,quests.length);
+  
   if(currentQuestIndex >= quests.length){
     currentQuest = null; questState = null;
     showNavUI(false);
@@ -649,9 +886,26 @@ applyWeatherVisuals(weather, map);
 
 // check progress (pickup/delivery) - now with wind check
 function checkQuestProgress(){
+
+  // Hangar-Refuel Check (zu Beginn von checkQuestProgress)
+  (function(){
+    const qb = document.getElementById('questBox');
+    // nur wenn Hangar Kreis existiert & wir gelandet sind & nicht schon betankt wird
+    if(hangarCircle && isLanded() && !refueling){
+      const distToHangar = distanceMetersBetween(heliPos, hangar);
+      if(distToHangar <= HANGAR_RADIUS && fuel < 100 && !outOfFuel){
+        // save quest text (wenn noch nicht gesichert)
+        if(qb) refuelSavedQuestText = qb.textContent;
+        startRefuel();
+        return; // kurz raus, refuel nimmt Priorität
+      }
+    }
+  })();
+
+
   if(!currentQuest) return;
   if(questState === 'toScene'){
-    const dist = distanceMetersBetween(carPos, currentQuest.location);
+    const dist = distanceMetersBetween(heliPos, currentQuest.location);
     if(dist <= LAND_RADIUS && isLanded() && Math.abs(speed) <= 0.0001 && getCurrentWindSpeed() <= LAND_WIND_MAX){
       if(activeScenePulse){ activeScenePulse.stop(); activeScenePulse = null; }
       flashMessage('Patient*in aufgenommen — Krankenhaus jetzt sichtbar');
@@ -661,11 +915,11 @@ function checkQuestProgress(){
       if(qb) qb.textContent = `Patient*in an Bord — fliege zum Krankenhaus: ${currentQuest.hospital.name}`;
     }
   } else if(questState === 'toHospital'){
-    const dist = distanceMetersBetween(carPos, currentQuest.hospital.location);
+    const dist = distanceMetersBetween(heliPos, currentQuest.hospital.location);
     if(dist <= LAND_RADIUS && isLanded() && Math.abs(speed) <= 0.0001 && getCurrentWindSpeed() <= LAND_WIND_MAX){
       if(activeHospitalPulse){ activeHospitalPulse.stop(); activeHospitalPulse = null; }
       flashMessage('Patient*in abgeliefert — Einsatz abgeschlossen');
-      let qb = document.getElementById('questBox');
+	  let qb = document.getElementById('questBox');
       if(qb) qb.textContent = `Einsatz ${currentQuestIndex+1} abgeschlossen`;
       setTimeout(()=>{ startNextQuest(); }, 900);
     }
@@ -684,18 +938,18 @@ function updateNavigationUI(){
   if(!target){ showNavUI(false); return; }
 
   // Distanztext
-  const distM = distanceMetersBetween(carPos, target);
+  const distM = distanceMetersBetween(heliPos, target);
   const distText = `${(distM/1000).toFixed(2)} km`;
 
   // Wind-Text
   const t = performance.now() / 1000;
   const gustNow = wind && wind.gustAmp ? (wind.gustAmp * Math.sin(t * wind.gustFreq * Math.PI * 2 + wind.seed)) : 0;
   const currentWind = Math.round(( (wind && wind.speed ? wind.speed : 0) + gustNow) * 10) / 10;
-  const dirStr = degToCompass(wind && wind.dir ? wind.dir : 0);
-  const windText = `Wind: ${currentWind.toFixed(1)} m/s ${dirStr}`;
+  const dirStr = degToCompass(wind && wind.dir ? wind.dir : 0, { from: true });
+  const windText = `Wind: ${currentWind.toFixed(1)} m/s aus ${dirStr}`;
 
   // Arrow-Rotation (absolute bearing)
-  const absBearing = bearingBetween(carPos, target); // 0..360
+  const absBearing = bearingBetween(heliPos, target); // 0..360
   const rot = Math.round(absBearing); // simple integer deg
   const ROT_THRESHOLD = 2; // nur drehen bei >2° Änderung
 
@@ -718,6 +972,363 @@ function updateNavigationUI(){
   showNavUI(true);
 }
 
+// HUD-Update (nutzt bereits vorhandene DOM-Elemente aus deinem HUD-Snippet)
+function updateFuelHUD(){
+  // clamp & Prozent
+  const pct = Math.max(0, Math.min(100, fuel));
+  fuelPercent = Math.ceil(pct);
+
+  // DOM-Elemente (erwartet in deinem HUD vorhanden)
+  const txt = document.getElementById('fuelPercentTxt'); // Text: "42%"
+  const bar = document.getElementById('fuelBar');        // innerer Balken (skalieren)
+  const kmEl = document.getElementById('fuelKmTxt');     // optional: "x km"
+  const etaEl = document.getElementById('fuelETA');      // optional: "ETA: 12:34"
+  const container = document.getElementById('fuelMeter'); // optional: um pulsing class zu toggeln
+
+  // --- Einmalig: nötige CSS-Regeln injizieren (smooth transform & low-flash) ---
+  if(!window._fuelHudStylesInjected){
+    const style = document.createElement('style');
+    style.id = 'fuelHudStyles';
+    style.textContent = `
+      #fuelBar { transform-origin: left center; transition: transform 280ms linear, background 200ms linear; }
+      .fuel-low-flash { animation: fuelFlash 1s ease-in-out infinite; }
+      @keyframes fuelFlash {
+        0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.0); }
+        50% { box-shadow: 0 0 8px 3px rgba(255,0,0,0.22); }
+        100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.0); }
+      }
+      .fuel-refuel-glow { animation: refuelGlow 1s ease-in-out infinite; }
+      @keyframes refuelGlow {
+        0% { box-shadow: 0 0 0 0 rgba(0,200,100,0.0); }
+        50% { box-shadow: 0 0 10px 4px rgba(0,200,100,0.18); }
+        100% { box-shadow: 0 0 0 0 rgba(0,200,100,0.0); }
+      }
+    `;
+    document.head.appendChild(style);
+    window._fuelHudStylesInjected = true;
+  }
+
+  // Text-Update
+  if(txt) txt.textContent = `${fuelPercent}%`;
+
+  // Balken-Update (performant via transform)
+  if(bar){
+    // Transform (scaleX: 0..1)
+    const scale = Math.max(0, Math.min(1, fuelPercent / 100));
+    bar.style.transform = `scaleX(${scale})`;
+    // sanfte Transition setzen (falls noch nicht)
+    if(!bar.style.transition) bar.style.transition = 'transform 280ms linear, background 200ms linear';
+
+    // Farbe
+    if(fuelPercent > 30) bar.style.background = 'green';
+    else if(fuelPercent > 10) bar.style.background = 'orange';
+    else bar.style.background = 'red';
+  }
+
+  // Reichweite (km) anzeigen, falls RANGE_KM verfügbar und ein Element existiert
+  if(typeof RANGE_KM === 'number' && kmEl){
+    const kmRemaining = (fuel / 100) * RANGE_KM;
+    kmEl.textContent = `${kmRemaining.toFixed(1)} km`;
+  }
+
+  // ETA bis leer in hh:mm:ss (wenn speed vorhanden und > 0)
+  if(etaEl){
+    const spd = (typeof speed === 'number') ? Math.abs(speed) : 0;
+    if(spd > 0.001){ // gültige Geschwindigkeit
+      // kmRemaining -> Meter / speed (m/s) -> Sekunden
+      const metersLeft = (fuel / 100) * RANGE_KM * 1000;
+      const secsLeft = metersLeft / spd;
+      etaEl.textContent = `ETA leer: ${formatSecondsAsHMS(secsLeft)}`;
+    } else {
+      etaEl.textContent = 'ETA leer: —';
+    }
+  }
+
+  // Refuel / low fuel Visuals am Container toggeln (falls vorhanden)
+  if(container){
+    container.classList.remove('fuel-low-flash', 'fuel-refuel-glow');
+    if(refueling){
+      container.classList.add('fuel-refuel-glow');
+    } else if(fuelPercent <= 10){
+      container.classList.add('fuel-low-flash');
+    }
+  }
+
+  // Accessibility: live region für Screenreader, falls vorhanden (id: fuelLive)
+  const live = document.getElementById('fuelLive');
+  if(live){
+    live.textContent = refueling ? `Tankt… ${fuelPercent}%` : `Treibstoff ${fuelPercent}%`;
+  }
+
+  // Hilfsfunktion: Sekunden in H:MM:SS
+  function formatSecondsAsHMS(s){
+    if(!isFinite(s) || s <= 0) return '0:00';
+    s = Math.round(s);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if(h > 0) return `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+    return `${m}:${sec.toString().padStart(2,'0')}`;
+  }
+}
+
+
+// consumption in percent per second (aufgerufen pro Frame mit dt in Sekunden)
+function consumeFuel(dt, throttleInput, currentSpeed, isBoost){
+  if(outOfFuel) return;
+
+  // Basisformel: base + throttle-term + speed-term + boost
+  // Beispiel: base 0.01 + throttle 0.18*1 + speed 0.002*30 + boost 1 => ~1.79 %/s
+  let consumptionPerSec = FUEL_CONFIG.base
+                         + FUEL_CONFIG.throttle * Math.abs(throttleInput)
+                         + FUEL_CONFIG.speed * Math.abs(currentSpeed)
+                         + (isBoost ? FUEL_CONFIG.boost : 0);
+
+  // subtrahiere entsprechend dt
+  fuel -= consumptionPerSec * dt;
+
+  if(fuel <= 0){
+    fuel = 0;
+    outOfFuel = true;
+    flashMessage('Kein Treibstoff — Motor ausgefallen');
+    // optional: setze boost/inputs zurück (wird in animate weiter beachtet)
+  }
+
+  updateFuelHUD();
+}
+
+function startRefuel(){
+  if(refueling) return;
+  refueling = true;
+  controlsDisabled = true;   // deaktiviert Tastatur-Handling (s.o.)
+  boostActive = false;       // Boost ausschalten
+  paused = true;             // Simuliere Ruhe (keine Bewegung, aber wir behalten animate loop laufen)
+  // Questtext ersetzen
+  const qb = document.getElementById('questBox');
+  if(qb){
+    qb.textContent = 'Heli wird betankt...';
+  }
+  flashMessage('Betankung gestartet');
+}
+
+function processRefuel(dt){
+  if(!refueling) return;
+  // Erhöhe Treibstoff
+  fuel += REFUEL_RATE * dt;
+  if(fuel > 100) fuel = 100;
+  updateFuelHUD();
+
+  // wenn voll -> beenden
+  if(fuel >= 100){
+    finishRefuel();
+  }
+}
+
+function finishRefuel(){
+  if(!refueling) return;
+  refueling = false;
+  controlsDisabled = false; // Steuerung wieder erlauben
+  outOfFuel = false;        // Motor wieder bereit (falls outOfFuel gesetzt war)
+  updateFuelHUD();
+
+  const qb = document.getElementById('questBox');
+  if(qb){
+    qb.textContent = 'Heli voll getankt. Du kannst wieder los fliegen.';
+    // nach 2s den vorherigen Questtext wiederherstellen (falls vorhanden)
+    setTimeout(()=>{
+      if(refuelSavedQuestText){
+        qb.textContent = refuelSavedQuestText;
+        refuelSavedQuestText = null;
+      }
+    }, 2000);
+  }
+  flashMessage('Betankung abgeschlossen');
+}
+
+// --- Emergency / Game Over wegen leerem Treibstoff (angepasst) ---
+// Sorge dafür, dass die Flags existieren
+if (typeof gameOver === 'undefined') window.gameOver = false;
+if (typeof _zoomEmergencyInterval === 'undefined') window._zoomEmergencyInterval = null;
+if (typeof fuelEmptyPending === 'undefined') window.fuelEmptyPending = false;
+
+/**
+ * Zoomt sukzessive auf die Notlandung-Position und ruft am Ende finalizeGameOver().
+ * Nutzt vorhandene Variablen: carPos (L.LatLng), currentQuest, map, ZOOM_LAND.
+ */
+function handleFuelEmptyEmergency(msg){
+  if (window.gameOver || window._zoomEmergencyInterval) return;
+
+  // Bestimme Zielposition: bevorzugt derzeitige Heli-Position (carPos), sonst Quest-Location, sonst STARTPOS fallback
+  let target = null;
+  try {
+    if (carPos && typeof carPos.lat === 'number' && typeof carPos.lng === 'number') {
+      target = [carPos.lat, carPos.lng];
+    } else if (currentQuest && Array.isArray(currentQuest.location) && currentQuest.location.length >= 2) {
+      target = currentQuest.location;
+    } else if (typeof STARTPOS !== 'undefined' && Array.isArray(STARTPOS)) {
+      target = STARTPOS;
+    }
+  } catch (e) {
+    console.warn('handleFuelEmptyEmergency: Fehler beim Bestimmen der Zielposition', e);
+    target = null;
+  }
+
+  if (!target) {
+    console.warn('handleFuelEmptyEmergency: keine Position vorhanden, GameOver direkt.');
+    finalizeGameOver(msg);
+    return;
+  }
+
+  // sichere Markierung, dass wir in die Notlandung gehen
+  window.fuelEmptyPending = true;
+
+  // sukzessive Zoom-Schritte (schrittweises Heranzoomen)
+  const stepMs = 900;
+  const zoomStep = 1;
+  window._zoomEmergencyInterval = setInterval(() => {
+    try {
+      const curZoom = (map && typeof map.getZoom === 'function') ? map.getZoom() : (typeof ZOOM_LAND !== 'undefined' ? ZOOM_LAND : 19);
+      // Wir wollen auf mindestens ZOOM_LAND heranzoomen (ZOOM_LAND existiert in deinem Code)
+      const nextZoom = Math.min(typeof ZOOM_LAND !== 'undefined' ? ZOOM_LAND : 19, Math.round(curZoom) + zoomStep);
+
+      if (map && typeof map.flyTo === 'function') {
+        map.flyTo(target, nextZoom, { animate: true, duration: 0.8, easeLinearity: 0.25 });
+      } else if (map && typeof map.panTo === 'function') {
+        map.panTo(target);
+        if (typeof map.setZoom === 'function') map.setZoom(nextZoom);
+      }
+
+      // Wenn wir nun auf Landezoom sind -> Spiel beenden / Notlandung auslösen
+      if (Math.round(nextZoom) >= (typeof ZOOM_LAND !== 'undefined' ? ZOOM_LAND : 19)) {
+        clearInterval(window._zoomEmergencyInterval);
+        window._zoomEmergencyInterval = null;
+        finalizeGameOver();
+      }
+    } catch (err) {
+      console.error('Zoom-Fehler in handleFuelEmptyEmergency:', err);
+      if (window._zoomEmergencyInterval) { clearInterval(window._zoomEmergencyInterval); window._zoomEmergencyInterval = null; }
+      finalizeGameOver();
+    }
+  }, stepMs);
+}
+
+
+/**
+ * Finale Notlandung / Game Over Anzeige.
+ * Verwendet vorhandene Flags: gameOver, paused, controlsDisabled, outOfFuel.
+ * Fügt ein Overlay mit Neustart-Button hinzu; ruft resetGame() wenn vorhanden, sonst location.reload().
+ */
+function finalizeGameOver(msg){
+  if (window.gameOver) return;
+  if (window._zoomEmergencyInterval) { clearInterval(window._zoomEmergencyInterval); window._zoomEmergencyInterval = null; }
+
+  window.gameOver = true;
+  // friere Spiel-Logik ein
+  paused = true;
+  // Sperre Eingaben — in deinem Code heißt das controlsDisabled
+  if (typeof controlsDisabled !== 'undefined') controlsDisabled = true;
+  // falls outOfFuel noch nicht gesetzt ist, markiere es
+  if (typeof outOfFuel !== 'undefined') outOfFuel = true;
+  // clear refuel attempt
+  if (typeof refueling !== 'undefined') refueling = false;
+  // markiere Flag zurück
+  window.fuelEmptyPending = false;
+
+  // Overlay erstellen oder wiederverwenden
+  let overlay = document.getElementById('gameOverOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'gameOverOverlay';
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      right: '0',
+      bottom: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'rgba(0,0,0,0.75)',
+      zIndex: 99999,
+      color: '#fff',
+      fontSize: '18px',
+      padding: '20px',
+      textAlign: 'center',
+      flexDirection: 'column',
+      gap: '16px'
+    });
+    document.body.appendChild(overlay);
+  }
+
+  // Inhalt mit Restart-Button (falls resetGame() vorhanden, wird diese Funktion verwendet)
+  const restartHint = (typeof resetGame === 'function') ? 'Spiel zurücksetzen' : 'Spiel neustarten';
+  overlay.innerHTML = `
+    <div style="max-width:900px;">
+      <strong style="font-size:28px;display:block;margin-bottom:6px">GAME OVER</strong>
+      <div>${msg}</div>
+      <div style="margin-top:8px;font-weight:700">Drücke ENTER zum Neustart.</div>
+    </div>
+  `;
+  
+  
+  // Restart-Verhalten zentral kapseln
+  function doRestart() {
+    // cleanup erstmal
+    cleanupOverlayListeners();
+
+    // wenn resetGame() existiert, nutze es; sonst reload
+    if (typeof resetGame === 'function') {
+      try { overlay.remove(); } catch (e) {}
+      resetGame();
+    } else {
+      location.reload();
+    }
+  }
+
+  // Cleanup-Funktion: entfernt Listener + Overlay DOM
+  function cleanupOverlayListeners() {
+    // Entferne globalen Key-Handler
+    document.removeEventListener('keydown', onGameOverKeyDown);
+    // Entferne Overlay aus DOM
+    try { const o = document.getElementById('gameOverOverlay'); if (o) o.remove(); } catch(e){}
+  }
+
+  // Keydown-Handler (named, damit wir ihn wieder entfernen können)
+  function onGameOverKeyDown(e) {
+    // Enter = Neustart
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doRestart();
+      return;
+    }
+    // optional: Escape schließt das Overlay (ohne Neustart)
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cleanupOverlayListeners();
+      return;
+    }
+  }
+
+  // Buttons hooken (falls noch nicht gemacht)
+  const restartBtn = document.getElementById('restartBtn');
+  if (restartBtn) {
+    restartBtn.onclick = (ev) => { ev.preventDefault(); doRestart(); };
+  }
+
+  const dbgClose = document.getElementById('dbgCloseGame');
+  if (dbgClose) {
+    dbgClose.onclick = (ev) => { ev.preventDefault(); cleanupOverlayListeners(); };
+  }
+
+  // registriere den Key-Handler (sofern nicht bereits registriert)
+  document.addEventListener('keydown', onGameOverKeyDown);
+
+  // optionale Console-Meldung
+  //console.log('finalizeGameOver: Game over gesetzt.');
+}
+
+
+
 
 // load quests
 loadQuests('quests.json');
@@ -725,9 +1336,26 @@ loadQuests('quests.json');
 // ---------------- ANIMATE (neu: Wind, boost, headwind penalty, ground vel) ----------------
 let last = null;
 function animate(ts){
+
+const dt = Math.min(0.05, (ts - last)/1000);
+
+   if(refueling){
+    processRefuel(Math.min(dt, 0.2)); // dt in Sekunden
+    // wir wollen während Betankung nicht weiter an Bewegung / Steuerung arbeiten
+    // aber HUD / map updates etc. können bleiben
+    document.getElementById('speed').textContent = (speed).toFixed(1);
+    updateNavigationUI();
+    requestAnimationFrame(animate);
+    return;
+  }
+
   if(paused){ last = ts; requestAnimationFrame(animate); return; }
   if(!last) last = ts;
-  const dt = Math.min(0.05, (ts - last)/1000);
+  
+  
+
+ 
+  
   last = ts;
 
   // if landed: disable movement but still update HUD/navigation
@@ -765,7 +1393,7 @@ function animate(ts){
     if(currentQuest){
       const target = (questState === 'toScene') ? currentQuest.location : (currentQuest.hospital && currentQuest.hospital.location);
       if(target){
-        const distToTarget = distanceMetersBetween(carPos, target);
+        const distToTarget = distanceMetersBetween(heliPos, target);
         allowBoost = distToTarget > 200;
       }
     }
@@ -777,6 +1405,27 @@ function animate(ts){
     let throttleInput = 0;
     if (keys.ArrowUp) throttleInput = 1;
     else if (keys.ArrowDown) throttleInput = -0.5;
+	
+	// wenn leerer Tank: keine Beschleunigung / kein Boost erlauben
+    if(outOfFuel){
+      // verbiete Schub und Boost, aber lasse das Heli natürlich ausrollen
+      throttleInput = 0;
+      boostActive = false;
+	  
+	  if (fuel <= 0 && !window.fuelEmptyPending) {
+	  outOfFuel = true;
+	  handleFuelEmptyEmergency('Treibstoff leer. Tanke das nächste mal rechtzeitig; fliege dafür einfach den Hangar an, wo du gestartet bist, und lande dort. Der Heli wird dann betankt.');
+}
+	  
+      // evtl. langsamer Stop statt sofortiger Nullsetzung:
+      // (hier wird Bremskraft im restlichen Loop weiter angewandt)
+    } else {
+      // ansonsten Treibstoff verbrauchen (nur wenn nicht gelandet)
+      if(!isLanded()){
+        // consumeFuel erwartet dt in Sekunden
+        consumeFuel(dt, throttleInput, speed, (boostActive && allowBoost));
+      }
+    }
 
     // agility for quick response just after gear change
     let agility = 1.0;
@@ -829,10 +1478,10 @@ function animate(ts){
     if(ground_speed > 0.0001){
       const move = ground_speed * dt;
       const moveBearingDeg = (toDeg(Math.atan2(ground_v_e, ground_v_n)) + 360) % 360;
-      carPos = destinationPoint(carPos.lat, carPos.lng, move, moveBearingDeg);
+      heliPos = destinationPoint(heliPos.lat, heliPos.lng, move, moveBearingDeg);
 
       if(!autoPanSuspended){
-        map.panTo(carPos, {animate:false});
+        map.panTo(heliPos, {animate:false});
       } else {
         pendingAutoPan = true;
       }
@@ -844,14 +1493,14 @@ function animate(ts){
 
   // HUD: show preset and boost availability
   const presetNow = (typeof GEARS[currentGear] === 'number') ? GEARS[currentGear] : (MAX_SPEED || 0);
-  const canBoostNow = boostActive && currentQuest && distanceMetersBetween(carPos, ((questState === 'toScene')? currentQuest.location : currentQuest.hospital.location)) > 200 && getCurrentWindSpeed() <= BOOST_WIND_LIMIT;
+  const canBoostNow = boostActive && currentQuest && distanceMetersBetween(heliPos, ((questState === 'toScene')? currentQuest.location : currentQuest.hospital.location)) > 200 && getCurrentWindSpeed() <= BOOST_WIND_LIMIT;
   document.getElementById('maxSpeed').textContent = Math.round(presetNow * (canBoostNow ? BOOST_MULT : 1));
 
   // display speed, UI and checks
   document.getElementById('speed').textContent = (speed).toFixed(1);
   updateZoomUI();
-  const carDiv = document.getElementById('carDiv');
-  if(carDiv){ carDiv.style.transform = `translate(-50%,-50%) rotate(${(headingDeg)}deg)`; }
+  const heliDiv = document.getElementById('heliDiv');
+  if(heliDiv){ heliDiv.style.transform = `translate(-50%,-50%) rotate(${(headingDeg)}deg)`; }
 
   // quest & nav
   checkQuestProgress();
@@ -870,6 +1519,37 @@ map.whenReady(()=>{
   updateZoomUI();
   document.getElementById('maxSpeed').textContent = Math.round(MAX_SPEED);
 });
+
+// --- Fuel HUD (Top-Right) ---
+(function createFuelHUD(){
+  const el = document.createElement('div');
+  el.id = 'fuelHUD';
+  Object.assign(el.style, {
+    position: 'fixed',
+    right: '12px',
+    top: '12px',
+    zIndex: 16000,
+    width: '200px',
+    background: 'rgba(255,255,255,0.95)',
+    padding: '8px 10px',
+    borderRadius: '10px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+    //fontWeight: '800',
+    //fontFamily: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial",
+    //fontSize: '13px'
+  });
+  el.classList.add('konsolentext');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="konsolentext">Treibstoff</div>
+      <div id="fuelPercentTxt" class="konsolentext">${Math.ceil(fuelPercent)}%</div>
+    </div>
+    <div style="height:10px;background:#eee;border-radius:8px;overflow:hidden">
+      <div id="fuelBar" style="height:100%;width:100%;background:green;transform-origin:left;transform:scaleX(1)"></div>
+    </div>
+  `;
+  document.body.appendChild(el);
+})();
 </script>
 </body>
 </html>
