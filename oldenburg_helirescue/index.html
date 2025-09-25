@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-25_14.39
+Current Version: 2025-09-25_14.44
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -1778,7 +1778,9 @@ CHEATS
     window._BOOST_ACCEL_MULT_ORIG = (typeof BOOST_ACCEL_MULT !== 'undefined') ? BOOST_ACCEL_MULT : null;
     window._ZOOM_MIN_ORIG = (typeof ZOOM_MIN !== 'undefined') ? ZOOM_MIN : null;
     window._MAP_MINZOOM_ORIG = map.options && typeof map.options.minZoom !== 'undefined' ? map.options.minZoom : null;
-
+	
+	alert("🚀 I'm the rocketman!");
+	
     // Erlaube extremes Hinauszoomen
     try { ZOOM_MIN = 0; } catch(e){ /* falls noch const */ }
     try { if (typeof map.setMinZoom === 'function') map.setMinZoom(0); } catch(e){}
