@@ -420,10 +420,10 @@
     }
   },
   {
-    "text": "Schwere Beinverletzung nach Fußgänger-gegen-Bus-Unfall am ZOB.",
+    "text": "Schwere Beinverletzung einer Fußgängerin durch Bus-Unfall am ZOB.",
     "location": [
-      53.144026,
-      8.211016
+      53.14539,
+      8.223369
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -434,10 +434,10 @@
     }
   },
   {
-    "text": "Bewusstloser Wanderer mit Unterkühlung im Schlosspark bei Nacht.",
+    "text": "Bewusstloser Wanderer mit Unterkühlung im Schlossgarten.",
     "location": [
-      53.144026,
-      8.211016
+      53.133947,
+      8.21124
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -448,10 +448,10 @@
     }
   },
   {
-    "text": "Herzrhythmusstörung nach Elektrounfall auf einem Schiff im Küstenhafen.",
+    "text": "Schwere Herzrhythmusstörungen nach Elektrounfall auf einem Schiff im Hafen.",
     "location": [
-      53.144026,
-      8.211016
+      53.140203,
+      8.240422
     ],
     "hospital": {
       "name": "Pius-Hospital",
@@ -464,8 +464,8 @@
   {
     "text": "Schweres Schädel-Hirn-Trauma nach Sprung in seichtes Wasser am Hafenbecken.",
     "location": [
-      53.144026,
-      8.211016
+      53.140129,
+      8.22449
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -476,10 +476,10 @@
     }
   },
   {
-    "text": "Vergiftung durch Ingestion von Industriechemikalien in einem Lagerbetrieb.",
+    "text": "Vergiftung durch Verschlucken von Industriechemikalien in einer Chemiefabrik.",
     "location": [
-      53.144026,
-      8.211016
+      53.191861,
+      8.230365
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -490,10 +490,10 @@
     }
   },
   {
-    "text": "Lebensbedrohliche innere Blutung nach Sturz in einem Steinbruch nahe Oldenburg.",
+    "text": "Lebensbedrohliche innere Blutung nach Sprung von einem Hochhaus.",
     "location": [
-      53.144026,
-      8.211016
+      53.14510851312143,
+      8.214859069624167
     ],
     "hospital": {
       "name": "Pius-Hospital",
@@ -504,10 +504,10 @@
     }
   },
   {
-    "text": "Schlaganfall bei einem Altenheim-Patienten auf einem abgelegenen Gehöft.",
+    "text": "Schlaganfall bei einem älteren Patienten auf einem abgelegenen Gehöft.",
     "location": [
-      53.144026,
-      8.211016
+      53.1637,
+      8.36158
     ],
     "hospital": {
       "name": "Evangelisches Krankenhaus",
@@ -520,8 +520,8 @@
   {
     "text": "Akute Intoxikation nach Drogenüberdosis mit Atemstillstand in der Innenstadt.",
     "location": [
-      53.144026,
-      8.211016
+      53.13797,
+      8.21583
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -534,8 +534,8 @@
   {
     "text": "Panikattacke mit Herzstillstand bei einem Großevent im Weser-Ems-Hallen-Areal.",
     "location": [
-      53.144026,
-      8.211016
+      53.14691,
+      8.23035
     ],
     "hospital": {
       "name": "Pius-Hospital Oldenburg",
@@ -548,8 +548,8 @@
   {
     "text": "Gefahrgutunfall beim Bahntransport durch Oldenburg mit Rauchentwicklung; mehrere Verletzte.",
     "location": [
-      53.144026,
-      8.211016
+      53.121023,
+      8.311694
     ],
     "hospital": {
       "name": "Klinikum Oldenburg AöR",

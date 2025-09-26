@@ -2,7 +2,7 @@
 <!-- 
 ⚠️ DANGER! This is a prototype. Use at your own risk.
 
-Current Version: 2025-09-26_04.52
+Current Version: 2025-09-26_14.18
 Invented by: Wolfmond
 
 This is free and unencumbered software released into the public domain.
@@ -42,11 +42,11 @@ const message = "⚠️ This is a highly experimental Prototype. Not yet intende
 
 if (!confirm(message)) window.location.href = "about:blank";
 alert('ℹ\nDu bist im Helikopter der Oldenburger Notfallrettung und bekommst Einsätze zugewiesen. Du bringst Verunfallte zum Krankenhaus.');
-alert('ℹ\nSteuerung\nBild ↑ : hoch fliegen\nBild ↓ : runter fliegen\n1-7 : Geschwindigkeit\n ←↑↓→ : Heli Steuern');
+alert('ℹ\nSteuerung\nBild ↑ : hoch fliegen\nBild ↓ : runter fliegen\n1-7 : Geschwindigkeit\n ←↑↓→ : Heli Steuern. SHIFT: Boost');
 alert('ℹ\nLande in den markierten Kreisen. Landen (Bild ↓) geht erst, wenn du nicht mehr fliegst.');
 alert('ℹ\nStarte zu deinem ersten Einsatz. Halte Bild ↑ gedrückt, um vom Boden abzuheben.');
 alert('ℹ\nViel Glück 🍀.');
-alert('ℹ\n Ach, und noch etwas: Tanken kannst du im Hangar. Lande im Hangar, dann wird der Heli betankt. 🍀.');
+alert('ℹ\nAch, und noch etwas: Tanken kannst du im Hangar. Lande im Hangar, dann wird der Heli betankt. 🍀.');
 
 </script>
 <style>
@@ -911,7 +911,7 @@ function loadQuests(path = 'quests.json'){
     ];
   }).then(data=>{
     const NUM_QUESTS = 3;
-	const MAX_QUESTS = 30; // data slicing
+	const MAX_QUESTS = 40; // data slicing
 
     // --- LIMITIEREN auf die ersten 8 Einträge VOR dem Shufflen ---
     const limited = Array.isArray(data) ? data.slice(0, MAX_QUESTS) : [];
