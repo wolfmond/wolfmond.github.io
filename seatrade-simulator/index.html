@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="de">
+<!-- 
+⚠️ DANGER! This is a prototype. Use at your own risk.
+
+Current Version: 2025-09-27_04.30
+Invented by: Wolfmond
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org/>
+-->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seatrade Simulator</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script>  
+  const message = "⚠️ This is a highly experimental Prototype. Not yet intended for public use.  No Warranties. Use this software at your own risk. Language: GERMAN";
+
+if (!confirm(message)) window.location.href = "about:blank";
+alert('ℹ\nDas hier ist ein Prototyp eines Wirtschaftssimulations-Spiels. Es ist noch nicht fertig, funktioniert aber schon ein bisschen. Die Schiffsnamen sind frei erfunden.');
+</script>
+  <style>
+    html,body,#map { height:100%; margin:0; padding:0; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; }
+    #map { position:absolute; inset:0; }
+    .hud { position:absolute; left:12px; top:12px; z-index:1000; background:rgba(255,255,255,0.95); padding:10px 12px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.12); min-width:260px; }
+    .hud h3{margin:0 0 6px 0;font-size:16px}
+    .money{font-size:20px;font-weight:700;color:#0b66d1}
+    .ship-list{margin-top:8px;font-size:13px}
+    .ship-item{margin-bottom:6px;border-bottom:1px dashed #eee;padding-bottom:6px}
+    .legend{position:absolute;right:12px;top:12px;z-index:1000;background:rgba(255,255,255,0.95);padding:8px 10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.12);font-size:13px}
+    .port-icon{width:36px;height:36px;border-radius:50%;background:#1e90ff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.15);border:2px solid #fff}
+    .port-icon svg{width:18px;height:18px}
+    .ship-icon{width:22px;height:22px;border-radius:50%;background:#ffd54d;border:2px solid #b37f00;display:flex;align-items:center;justify-content:center}
+    .ship-icon svg{width:14px;height:14px}
+    .overlay-error { position:absolute; inset:0; background:rgba(0,0,0,0.6); color:#fff; display:flex; align-items:center; justify-content:center; z-index:2000; padding:20px; text-align:center; }
+    .unload-popup .leaflet-popup-content-wrapper{font-size:13px}
+	.spielabbruch {max-width:500px;}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="hud" id="hud" style="display:none">
+    <h3>Reederei HUD</h3>
+    <div>Gesamteinnahmen</div>
+    <div class="money" id="money">€ 0.00</div>
+    <div class="ship-list" id="shipList"></div>
+  </div>
+
+  <div class="legend" id="legend" style="display:none">
+    <div><strong>Legende</strong></div>
+    <div style="display:flex;align-items:center;margin-top:6px"><div class="port-icon" style="margin-right:8px"></div> Hafen</div>
+    <div style="display:flex;align-items:center;margin-top:6px"><div class="ship-icon" style="margin-right:8px"></div> Schiff</div>
+  </div>
+
+  <div id="errorOverlay" class="overlay-error" style="display:none"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+  <script>
+  (function(){
+    // CONFIG
+    const DATA_URL = './seatrade-simulator-data.json'; // <--- die Datei MUSS hier vorhanden sein
+    const EARNING_PER_KM = 138.40; // EUR pro km
+    const DEFAULT_UNLOAD_PAYMENT_PER_UNIT = 0.5; // EUR pro Kapazitätseinheit beim Abschluss des Entladens
+	const KNOT_TO_KMPH = 1.852; // 1 Knoten = 1.852 km/h
+    const SIM_SPEED = 500; // Simulations-Geschwindigkeits-Multiplikator für Demo (1 = Echtzeit). Passe nach Bedarf an.
+	
+	const STATUS = {
+		UNDERWAY: 'unterwegs',
+		BERTHED: 'angelegt',
+		UNLOADING: 'wird entladen',
+		AT_ANCHOR: 'vor Anker',
+		FINISHED: 'fertig'
+};
+
+    // UI refs
+    const hudEl = document.getElementById('hud');
+    const legendEl = document.getElementById('legend');
+    const moneyEl = document.getElementById('money');
+    const shipListEl = document.getElementById('shipList');
+    const errorOverlay = document.getElementById('errorOverlay');
+
+    // small helpers
+    function showError(msg){
+      console.error(msg);
+      errorOverlay.style.display = 'flex';
+      errorOverlay.innerHTML = `<div class="spielabbruch"><h2>Spielabbruch — Fehler beim Laden der Daten</h2><div style="margin-top:8px">${String(msg)}</div><div style="margin-top:12px;font-size:13px;opacity:0.9">Stelle sicher, dass <code>seatrade-simulator-data.json</code> im selben Ordner liegt und valide JSON enthält. Eventuell konnte die Datei auch nicht lokal von deinem Computer geladen werden. Schau in die Developer Konsole, vielleicht erfährst du da mehr.</div></div>`;
+      hudEl.style.display = 'none';
+      legendEl.style.display = 'none';
+    }
+
+    // fetch data
+    fetch(DATA_URL).then(resp => {
+      if (!resp.ok) throw new Error(`Fehler beim Laden: ${resp.status} ${resp.statusText}`);
+      return resp.json();
+    }).then(data => {
+      // validate
+      if (!data || !Array.isArray(data.ports) || !Array.isArray(data.routes)) throw new Error('Ungültiges JSON: erwartete Felder "ports" und "routes" als Arrays.');
+      initSimulation(data);
+    }).catch(err => {
+      showError(err.message || err);
+    });
+
+    // ------------------------------------------------------------------
+    function initSimulation(HANSE_DATA){
+      // show HUD/legend now
+      hudEl.style.display = '';
+      legendEl.style.display = '';
+
+      // init map
+      const map = L.map('map', {
+		center: [54.0, 8.5],
+		zoom: 6,
+		// Beschränke Panning auf genau eine Welt (±180° Länge, ca. ±85° Breite)
+		maxBounds: [[-85, -180], [85, 180]],
+		// 1 = kein Durchbrechen möglich; 0.9 = etwas 'klebriger' Rand, aber möglich
+		maxBoundsViscosity: 1,
+		// verhindert springende Kopien, falls user über Grenze klickt (optional)
+		worldCopyJump: false
+		});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom: 4, maxZoom:18, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>', noWrap: true }).addTo(map);
+
+      // icon factories
+      function createPortIcon(){
+        const html = `<div class="port-icon">`+
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#1f1f1f"><path d="M480-80q-61 0-125-22t-116-60q-52-38-85.5-89T120-360v-120l160 120-62 62q29 51 92 88t130 47v-357H320v-80h120v-47q-35-13-57.5-43.5T360-760q0-50 35-85t85-35q50 0 85 35t35 85q0 39-22.5 69.5T520-647v47h120v80H520v357q67-10 130-47t92-88l-62-62 160-120v120q0 58-33.5 109T721-162q-52 38-116 60T480-80Zm0-640q17 0 28.5-11.5T520-760q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760q0 17 11.5 28.5T480-720Z"/></svg>`+
+          `</div>`;
+        return L.divIcon({ html, className:'', iconSize:[36,36], iconAnchor:[18,18] });
+      }
+      function createShipIcon(angle){
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#1f1f1f'><path d='M12 2l3 7h-6l3-7zM2 22l4-8h12l4 8H2z'/></svg>`;
+        const html = `<div class="ship-icon" style="transform: rotate(${angle}deg)">${svg}</div>`;
+        return L.divIcon({ html, className:'', iconSize:[22,22], iconAnchor:[11,11] });
+      }
+
+      // helpers: haversine, bearing, interpolation
+      function toRad(deg){ return deg * Math.PI / 180; }
+      function distanceKm(a,b){
+        const R = 6371.0088;
+        const dLat = toRad(b.lat - a.lat);
+        const dLon = toRad(b.lng - a.lng);
+        const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+        const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+        return 2*R*Math.asin(Math.sqrt(h));
+      }
+      function bearingDeg(a,b){
+        const lat1 = toRad(a.lat), lat2 = toRad(b.lat), dLon = toRad(b.lng - a.lng);
+        const y = Math.sin(dLon)*Math.cos(lat2);
+        const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+        return ( (Math.atan2(y,x)*180/Math.PI) + 360 ) % 360;
+      }
+      function interp(a,b,f){ return { lat: a.lat + (b.lat-a.lat)*f, lng: a.lng + (b.lng-a.lng)*f }; }
+
+      // place ports and draw routes from data
+      const ports = {};
+      try {
+        HANSE_DATA.ports.forEach(p=>{
+          if (typeof p.lat !== 'number' || typeof p.lng !== 'number') throw new Error('Port-Koordinaten ungültig für id=' + (p.id||'<unknown>'));
+          ports[p.id] = { ...p };
+          ports[p.id].marker = L.marker([p.lat,p.lng], { icon: createPortIcon() }).addTo(map).bindTooltip(p.name || p.id);
+        });
+      } catch(e){
+        showError('Fehler beim Einlesen der Ports: ' + e.message);
+        return;
+      }
+
+      const routes = {};
+      try {
+        HANSE_DATA.routes.forEach(r=>{
+          if (!Array.isArray(r.waypoints) || r.waypoints.length < 2) throw new Error('Route braucht mindestens 2 Waypoints: ' + (r.id||r.name||'?'));
+          routes[r.id] = { ...r };
+          routes[r.id].polyline = L.polyline(r.waypoints.map(w=>[w.lat,w.lng]), {color:'#0b3d91', weight:3, opacity:0.6}).addTo(map);
+        });
+      } catch(e){
+        showError('Fehler beim Einlesen der Routen: ' + e.message);
+        return;
+      }
+
+      // --- Ship factory (uses route id) ---
+      function createShip(opts){
+        const route = routes[opts.routeId];
+        if (!route) throw new Error('Route nicht gefunden: ' + opts.routeId);
+
+        const outPts = route.waypoints.map(w=>({lat:w.lat,lng:w.lng}));
+        const backPts = outPts.slice().reverse().slice(1); // avoid duplicate target
+        const fullPts = outPts.concat(backPts);
+
+        // compute segment lengths
+        const segLengths = [];
+        for (let i=0;i<fullPts.length-1;i++){
+          segLengths.push(distanceKm(fullPts[i], fullPts[i+1]));
+        }
+        const totalKm = segLengths.reduce((s,v)=>s+v,0);
+
+        const turnaroundIndex = outPts.length - 1; // index where unload happens
+        const ship = {
+          id: opts.id,
+          name: opts.name || opts.id,
+          capacity: Number(opts.capacity) || 1000,
+          speed_knots: Number(opts.speed_knots) || 20,
+          speed_kmph: (Number(opts.speed_knots) || 20) * KNOT_TO_KMPH,
+          unloadRateUnitsPerHour: Number(opts.unloadRateUnitsPerHour) || 300,
+          unloadPaymentPerUnit: (typeof opts.unloadPaymentPerUnit === 'number') ? opts.unloadPaymentPerUnit : DEFAULT_UNLOAD_PAYMENT_PER_UNIT,
+          pts: fullPts,
+          segLengths,
+          totalKm,
+          marker: null,
+          segIndex: 0,
+          segProgressKm: 0,
+          kmTraveled: 0,
+          earnings: 0,
+          status: STATUS.UNDERWAY,
+          finished: false,
+          turnaroundIndex,
+          dwellRemainingHours: 0,
+          unloadPaid: false
+        };
+
+        const start = fullPts[0];
+        ship.marker = L.marker([start.lat, start.lng], { icon: createShipIcon(0) }).addTo(map).bindTooltip(ship.name);
+        return ship;
+      }
+
+      // create ships: use example ships but you can change values or load from data
+      const ships = [];
+      try {
+        // Ensure required routes exist; adjust IDs if your JSON differs
+        ships.push(createShip({ id:'s1', name:'Aegir', capacity:900, speed_knots:20, routeId:'r2', unloadRateUnitsPerHour:300, unloadPaymentPerUnit:0.5 }));
+		ships.push(createShip({ id:'s2', name:'Baltic Trader', capacity:1200, speed_knots:16, routeId:'r3', unloadRateUnitsPerHour:300, unloadPaymentPerUnit:0.5 }));
+      } catch(e){
+        showError('Fehler beim Anlegen der Schiffe: ' + e.message);
+        return;
+      }
+
+      // fit view
+      try{
+        const allLatLngs = [].concat(
+          HANSE_DATA.ports.map(p=>[p.lat,p.lng]),
+          HANSE_DATA.routes.flatMap(r=>r.waypoints.map(w=>[w.lat,w.lng]))
+        );
+        map.fitBounds(allLatLngs, { padding:[50,50] });
+      } catch(e){ /* ignore */ }
+
+      // Simulation loop
+      let lastTime = performance.now();
+      let rafId = null;
+
+      function step(now){
+        const dtMs = now - lastTime; lastTime = now;
+        // apply SIM_SPEED multiplier so simulation can be faster than wallclock (useful for demo)
+        const dtSimHours = (dtMs / 1000 / 3600) * SIM_SPEED;
+
+        try {
+          ships.forEach(ship => {
+            if (ship.finished) return;
+
+            // if docking/unloading
+            if (ship.dwellRemainingHours > 0){
+              const prev = ship.dwellRemainingHours;
+              ship.dwellRemainingHours = Math.max(0, ship.dwellRemainingHours - dtSimHours);
+              if (prev > 0 && ship.dwellRemainingHours === 0 && !ship.unloadPaid){
+                const pay = ship.capacity * (ship.unloadPaymentPerUnit ?? DEFAULT_UNLOAD_PAYMENT_PER_UNIT);
+                ship.earnings += pay;
+                ship.unloadPaid = true;
+                // popup
+                const popup = L.popup({ autoClose:false, closeOnClick:false, closeButton:false, className:'unload-popup' })
+                  .setLatLng(ship.marker.getLatLng())
+                  .setContent(`<strong>Entladen abgeschlossen</strong><br>+ ${new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(pay)}`);
+                popup.openOn(map);
+                setTimeout(()=>{ try{ map.closePopup(popup); } catch(e){} }, 2000);
+              }
+              ship.status = ship.dwellRemainingHours > 0 ? STATUS.UNLOADING : STATUS.UNDERWAY;
+              return;
+            }
+
+            // movement: effective distance (km) that the ship can cover this tick
+            let remaining = ship.speed_kmph * dtSimHours;
+
+            while (remaining > 0 && !ship.finished && ship.dwellRemainingHours === 0){
+              const segLen = ship.segLengths[ship.segIndex];
+              const segRemain = segLen - ship.segProgressKm;
+
+              if (segLen === 0){
+                ship.segIndex++;
+                ship.segProgressKm = 0;
+                if (ship.segIndex >= ship.pts.length-1){ ship.finished = true; ship.status=STATUS.AT_ANCHOR; break; }
+                continue;
+              }
+
+              if (remaining < segRemain){
+                ship.segProgressKm += remaining;
+                ship.kmTraveled += remaining;
+                ship.earnings += remaining * EARNING_PER_KM;
+                remaining = 0;
+
+                const a = ship.pts[ship.segIndex], b = ship.pts[ship.segIndex+1];
+                const f = ship.segProgressKm / segLen;
+                const pos = interp(a,b,f);
+                ship.marker.setLatLng([pos.lat,pos.lng]);
+                ship.marker.setIcon(createShipIcon(bearingDeg(a,b)));
+                ship.status = STATUS.UNDERWAY;
+              } else {
+                // finish segment
+                ship.kmTraveled += segRemain;
+                ship.earnings += segRemain * EARNING_PER_KM;
+                remaining -= segRemain;
+                ship.segIndex++;
+                ship.segProgressKm = 0;
+
+                // snapped to node
+                if (ship.segIndex >= ship.pts.length-1){
+                  ship.finished = true;
+                  ship.status = STATUS.AT_ANCHOR;
+                  const last = ship.pts[ship.pts.length-1];
+                  ship.marker.setLatLng([last.lat,last.lng]);
+                  ship.marker.setIcon(createShipIcon(0));
+                  break;
+                } else {
+                  const currentPoint = ship.pts[ship.segIndex];
+                  ship.marker.setLatLng([currentPoint.lat, currentPoint.lng]);
+                  const nextPoint = ship.pts[ship.segIndex+1];
+                  ship.marker.setIcon(createShipIcon(bearingDeg(currentPoint, nextPoint)));
+                  ship.status = STATUS.UNDERWAY;
+                }
+
+                // check if this node is the turnaround (target on outward leg)
+                if (ship.segIndex === ship.turnaroundIndex){
+                  const unloadRate = ship.unloadRateUnitsPerHour || 300;
+                  ship.dwellRemainingHours = Math.max(0, ship.capacity / unloadRate);
+                  ship.unloadPaid = false;
+                  if (ship.dwellRemainingHours > 0){
+                    ship.status = STATUS.UNLOADING;
+                    break; // stop movement for this tick
+                  }
+                }
+              }
+            } // while
+          }); // ships.forEach
+        } catch(err){
+          console.error('Fehler während Simulationsschritt:', err);
+        }
+
+        rafId = requestAnimationFrame(step);
+      }
+
+      lastTime = performance.now();
+      rafId = requestAnimationFrame(step);
+
+      // HUD updates every 2 seconds
+      updateHUD();
+      const hudInterval = setInterval(updateHUD, 2000);
+
+      function updateHUD(){
+        const totalEur = ships.reduce((s,sh)=>s+sh.earnings,0);
+        moneyEl.textContent = new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(totalEur);
+        shipListEl.innerHTML = '';
+        ships.forEach(sh=>{
+          const div = document.createElement('div'); div.className='ship-item';
+          const statusText = sh.status + (sh.dwellRemainingHours>0 ? `, fertig in ${ Math.round(sh.dwellRemainingHours*60) } Minuten` : '');
+          div.innerHTML = `<div><strong>${sh.name}</strong> <span style="color:#666">(${statusText})</span></div>`+
+            `<div style="font-size:12px">Geschwindigkeit: ${sh.speed_knots} kn (≈ ${ (sh.speed_kmph).toFixed(1) } km/h) — Kapazität: ${sh.capacity} — Distanz: ${sh.kmTraveled.toFixed(2)} km — Erlös: ${new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(sh.earnings)}</div>`;
+          shipListEl.appendChild(div);
+        });
+      }
+
+      // expose debug handles
+      window.hanse = { HANSE_DATA, ships, ports, routes, map, stop: ()=>{ cancelAnimationFrame(rafId); clearInterval(hudInterval); } };
+    } // end initSimulation
+  })();
+  </script>
+</body>
+</html>

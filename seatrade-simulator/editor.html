@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="de">
+<!-- 
+⚠️ DANGER! This is a prototype. Use at your own risk.
+
+Current Version: 2025-09-27_04.30
+Invented by: Wolfmond
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org/>
+-->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seatrade-Simulator Editor — Häfen & Routen</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <style>
+    html,body,#map { height: 100%; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+    /* sidebar 320px */
+    #map { position: absolute; inset: 0 340px 0 0; }
+    #sidebar { position: absolute; right: 0; top: 0; bottom: 0; width: 320px; background: #fff; border-left: 1px solid #ddd; padding: 12px; overflow:auto; }
+    h2 { margin: 6px 0 12px; font-size: 18px; }
+    button { display: inline-block; margin: 6px 6px 6px 0; padding: 6px 10px; border-radius:6px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; }
+    button.primary { background:#0b66d1; color:#fff; border-color:#085ab0; }
+    .small { font-size:13px; padding:4px 8px; }
+    .muted { color:#666; font-size:13px; }
+    .list { margin-top:10px; }
+    .list h3 { margin:8px 0 6px; font-size:14px; }
+    .item { padding:6px 8px; border-radius:6px; border:1px solid #eee; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+    .item.selected { background:#eef6ff; border-color:#cfe3ff; }
+    .controls { margin-top:10px; }
+    label { display:block; margin-top:8px; font-size:13px; }
+    input[type=file] { display:block; margin-top:6px; }
+    textarea { width:100%; height:140px; font-family:monospace; font-size:13px; }
+    .help { font-size:12px; color:#444; margin-top:8px; }
+
+    /* Port icon (blue circle with anchor svg centered) */
+    .port-icon { width:36px; height:36px; border-radius:50%; background:#1e90ff; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.2); border:2px solid #fff; transition: box-shadow .18s, transform .12s; }
+    .port-icon svg { width:18px; height:18px; transform:translateY(-1px); }
+    /* selected visual: bright white backlight / glow */
+    .port-icon.selected { box-shadow: 0 0 18px 6px rgba(255,255,255,0.95), 0 2px 8px rgba(0,0,0,0.15); transform: scale(1.06); }
+
+    /* Small handle for vertex markers */
+    .vertex-handle { width:10px; height:10px; border-radius:50%; background:#fff; border:2px solid #0b3d91; box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="sidebar">
+    <h2>Hafen & Routen Editor</h2>
+    <div class="controls">
+      <button id="btnAddPort" class="primary">Hafen hinzufügen</button>
+      <button id="btnStartRoute" class="small">Route zeichnen</button>
+      <button id="btnCancelMode" class="small">Abbrechen</button>
+    </div>
+
+    <div class="controls">
+      <button id="btnExport">Export (JSON)</button>
+      <button id="btnImport" class="small">Import (Datei wählen)</button>
+      <input id="fileImport" type="file" accept="application/json" style="display:none">
+    </div>
+
+    <div class="help">Anleitung: Klicke <strong>Hafen hinzufügen</strong>, dann auf die Karte, um einen Hafen zu platzieren (Name wird abgefragt). Für Routen: zuerst Quell-Hafen klicken, dann "Route zeichnen" und Punkte auf Karte setzen; zum Abschließen Ziel-Hafen klicken.</div>
+
+    <div class="list">
+      <h3>Häfen</h3>
+      <div id="portsList"></div>
+      <h3>Routen</h3>
+      <div id="routesList"></div>
+    </div>
+
+    <div style="margin-top:6px">
+      <label>Rohdaten (Export/Import Vorschau)</label>
+      <textarea id="jsonPreview" readonly></textarea>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+  <script>
+    // --- Map setup ---
+    const map = L.map('map', { center: [53.5, 8.1], zoom: 6 });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+    // Data stores
+    const ports = {};
+    const routes = {};
+    let nextPortId = 1, nextRouteId = 1;
+
+    // UI refs
+    const btnAddPort = document.getElementById('btnAddPort');
+    const btnStartRoute = document.getElementById('btnStartRoute');
+    const btnCancelMode = document.getElementById('btnCancelMode');
+    const btnImport = document.getElementById('btnImport');
+    const fileImport = document.getElementById('fileImport');
+    const portsList = document.getElementById('portsList');
+    const routesList = document.getElementById('routesList');
+    const jsonPreview = document.getElementById('jsonPreview');
+
+    // Mode + state
+    let mode = null; // null | 'add-port' | 'route-drawing'
+    let selectedPortId = null;
+    let routeDrawing = { sourceId: null, waypoints: [], tempLine: null };
+
+    function setMode(m) {
+      mode = m;
+      btnAddPort.classList.toggle('active', m === 'add-port');
+      btnStartRoute.classList.toggle('active', m === 'route-drawing');
+      map.getContainer().style.cursor = m ? (m === 'add-port' || m === 'route-drawing' ? 'crosshair' : '') : '';
+    }
+
+    // create port icon
+    function createPortIcon() {
+      const html = `<div class="port-icon">` +
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#1f1f1f" aria-hidden="true"><path d="M480-80q-61 0-125-22t-116-60q-52-38-85.5-89T120-360v-120l160 120-62 62q29 51 92 88t130 47v-357H320v-80h120v-47q-35-13-57.5-43.5T360-760q0-50 35-85t85-35q50 0 85 35t35 85q0 39-22.5 69.5T520-647v47h120v80H520v357q67-10 130-47t92-88l-62-62 160-120v120q0 58-33.5 109T721-162q-52 38-116 60T480-80Zm0-640q17 0 28.5-11.5T520-760q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760q0 17 11.5 28.5T480-720Z"/></svg>` +
+        `</div>`;
+      return L.divIcon({ html, className: '', iconSize: [36,36], iconAnchor: [18,18] });
+    }
+    const portIcon = createPortIcon();
+
+    function highlightPort(id) {
+      if (selectedPortId && ports[selectedPortId]) {
+        try { const elPrev = ports[selectedPortId].marker.getElement()?.querySelector('.port-icon'); if (elPrev) elPrev.classList.remove('selected'); } catch(e){}
+      }
+      selectedPortId = id;
+      if (id && ports[id]) {
+        try { const el = ports[id].marker.getElement()?.querySelector('.port-icon'); if (el) el.classList.add('selected'); } catch(e){}
+      }
+    }
+
+    function addPort(latlng, name) {
+      const id = 'p' + nextPortId++;
+      const marker = L.marker(latlng, { icon: portIcon, draggable: true }).addTo(map);
+      const port = { id, name: name || id, lat: latlng.lat, lng: latlng.lng, marker };
+      ports[id] = port;
+
+      marker.on('click', () => onPortClicked(id));
+      marker.on('drag', (e) => { port.lat = e.latlng.lat; port.lng = e.latlng.lng; updateRoutesForPort(id); refreshLists(); updatePreview(); });
+      marker.bindTooltip(port.name, {permanent:false, direction:'top'});
+      refreshLists(); updatePreview();
+      return port;
+    }
+
+    function onPortClicked(id) {
+      highlightPort(id);
+      selectPortInList(id);
+      if (mode === 'route-drawing') {
+        if (!routeDrawing.sourceId) { setRouteSource(id); return; }
+        if (routeDrawing.sourceId && id !== routeDrawing.sourceId) { finalizeRoute(id); return; }
+      }
+    }
+
+    function updateRoutesForPort(portId) {
+      for (const rid in routes) {
+        const r = routes[rid];
+        if (r.polyline) { r.polyline.setLatLngs(r.waypoints.map(p=>[p.lat,p.lng])); refreshRouteHandles(r); }
+      }
+    }
+
+    function refreshLists() {
+      portsList.innerHTML = '';
+      for (const id in ports) {
+        const p = ports[id];
+        const div = document.createElement('div'); div.className='item'; div.dataset.id=id;
+        div.innerHTML = `<div><strong>${escapeHtml(p.name)}</strong><div class="muted">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div></div><div><button data-id="${id}" class="small">Select</button> <button data-del="${id}" class="small">Del</button></div>`;
+        portsList.appendChild(div);
+      }
+
+      routesList.innerHTML = '';
+      for (const id in routes) {
+        const r = routes[id];
+        const div = document.createElement('div'); div.className='item'; div.dataset.id=id;
+        div.innerHTML = `<div><strong>${escapeHtml(r.name)}</strong><div class="muted">${ports[r.sourceId]?.name || r.sourceId} → ${ports[r.targetId]?.name || r.targetId}</div></div><div><button data-id="${id}" class="small">Edit</button> <button data-del="${id}" class="small">Del</button></div>`;
+        routesList.appendChild(div);
+      }
+
+      // delegate
+      portsList.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.id) btn.onclick = () => { selectPortInList(btn.dataset.id); if (mode === 'route-drawing') setRouteSource(btn.dataset.id); };
+        if (btn.dataset.del) btn.onclick = () => { deletePort(btn.dataset.del); };
+      });
+      routesList.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.id) btn.onclick = () => { editRoute(btn.dataset.id); };
+        if (btn.dataset.del) btn.onclick = () => { deleteRoute(btn.dataset.del); };
+      });
+    }
+
+    function selectPortInList(id) { const p = ports[id]; if (!p) return; map.panTo([p.lat,p.lng]); portsList.querySelectorAll('.item').forEach(it => it.classList.toggle('selected', it.dataset.id === id)); }
+
+    function editRoute(id) {
+      const r = routes[id]; if (!r) return; if (r.polyline) map.fitBounds(r.polyline.getBounds().pad(0.4)); const newName = prompt('Route-Name', r.name); if (newName !== null) { r.name = newName; refreshLists(); updatePreview(); } enableRouteEditing(r);
+    }
+
+    function deletePort(id) { if (!confirm('Hafen löschen? Alle verbundenen Routen werden entfernt.')) return; const toRemove = Object.values(routes).filter(r=>r.sourceId===id||r.targetId===id).map(r=>r.id); toRemove.forEach(deleteRoute); const p = ports[id]; if (p) { map.removeLayer(p.marker); delete ports[id]; } if (selectedPortId===id) selectedPortId=null; refreshLists(); updatePreview(); }
+
+    function deleteRoute(id) { const r = routes[id]; if (!r) return; if (r.polyline) map.removeLayer(r.polyline); if (r.handleMarkers) r.handleMarkers.forEach(h=>map.removeLayer(h)); delete routes[id]; refreshLists(); updatePreview(); }
+
+    // drawing flow
+    btnAddPort.addEventListener('click', ()=> setMode('add-port'));
+    btnStartRoute.addEventListener('click', ()=>{
+      setMode('route-drawing');
+      if (selectedPortId && ports[selectedPortId]) setRouteSource(selectedPortId);
+      else alert('Route-Zeichenmodus aktiv: Klicke einen Quell-Hafen (oder wähle ihn in der Liste), dann lege Wegpunkte fest und klicke Ziel-Hafen, um zu beenden.');
+    });
+    btnCancelMode.addEventListener('click', ()=>{ resetDrawingState(); setMode(null); });
+
+    function resetDrawingState() { if (routeDrawing.tempLine) { map.removeLayer(routeDrawing.tempLine); routeDrawing.tempLine=null; } routeDrawing.sourceId=null; routeDrawing.waypoints=[]; }
+
+    map.on('click', (e)=>{
+      if (mode==='add-port') { const name = prompt('Name des Hafens'); addPort(e.latlng, name || ('Port ' + nextPortId)); setMode(null); return; }
+      if (mode==='route-drawing') {
+        if (!routeDrawing.sourceId) {
+          const nearest = findPortAtLatLng(e.latlng, 12);
+          if (nearest) { setRouteSource(nearest.id); return; }
+          alert('Bitte zuerst einen Quell-Hafen anklicken.'); return;
+        }
+        const nearest = findPortAtLatLng(e.latlng, 12);
+        if (nearest && nearest.id !== routeDrawing.sourceId) { finalizeRoute(nearest.id); return; }
+        // add waypoint
+        routeDrawing.waypoints.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+        if (routeDrawing.tempLine) routeDrawing.tempLine.setLatLngs(routeDrawing.waypoints.map(p=>[p.lat,p.lng]));
+        else routeDrawing.tempLine = L.polyline(routeDrawing.waypoints.map(p=>[p.lat,p.lng]), { color:'#0b3d91', dashArray:'6,6' }).addTo(map);
+        return;
+      }
+    });
+
+    function findPortAtLatLng(latlng, pxTol) {
+      const point = map.latLngToContainerPoint(latlng);
+      for (const id in ports) {
+        const p = ports[id];
+        const pPoint = map.latLngToContainerPoint([p.lat,p.lng]);
+        if (point.distanceTo(pPoint) <= pxTol) return p;
+      }
+      return null;
+    }
+
+    function setRouteSource(portId) {
+      routeDrawing.sourceId = portId;
+      routeDrawing.waypoints = [{ lat: ports[portId].lat, lng: ports[portId].lng }];
+      if (routeDrawing.tempLine) { map.removeLayer(routeDrawing.tempLine); }
+      routeDrawing.tempLine = L.polyline([[ports[portId].lat, ports[portId].lng]], { color:'#0b3d91', dashArray:'6,6' }).addTo(map);
+      highlightPort(portId);
+      alert('Quelle gesetzt: ' + ports[portId].name + '. Platziere nun Wegpunkte oder klicke Ziel-Hafen an, um zu beenden.');
+    }
+
+    function finalizeRoute(targetId) {
+      const srcId = routeDrawing.sourceId; if (!srcId) return alert('Keine Quelle ausgewählt.');
+      const last = routeDrawing.waypoints[routeDrawing.waypoints.length-1];
+      if (!last || last.lat !== ports[targetId].lat || last.lng !== ports[targetId].lng) {
+        routeDrawing.waypoints.push({ lat: ports[targetId].lat, lng: ports[targetId].lng });
+      }
+      const rid = 'r' + nextRouteId++;
+      const autoName = `${ports[srcId].name}-${ports[targetId].name}`;
+      const route = { id: rid, name: autoName, sourceId: srcId, targetId: targetId, waypoints: routeDrawing.waypoints.slice(), editing:false };
+      const latlngs = route.waypoints.map(p=>[p.lat,p.lng]);
+      const poly = L.polyline(latlngs, { color:'#0b3d91', weight:4 }).addTo(map);
+      poly.on('contextmenu', (ev)=>{ L.DomEvent.stopPropagation(ev); ev.preventDefault(); });
+      route.polyline = poly; route.handleMarkers = [];
+      routes[rid] = route;
+      poly.on('click', ()=> editRoute(rid));
+
+      if (routeDrawing.tempLine) { map.removeLayer(routeDrawing.tempLine); routeDrawing.tempLine=null; }
+      routeDrawing.sourceId=null; routeDrawing.waypoints=[];
+      setMode(null); refreshLists(); updatePreview(); createHandleMarkersForRoute(route);
+    }
+
+    function createHandleMarkersForRoute(route) {
+      if (!route.waypoints) return;
+      // clean existing
+      if (route.handleMarkers) { route.handleMarkers.forEach(m=>{ try { map.removeLayer(m); } catch(e){} }); }
+      const arr = [];
+      for (let i=0;i<route.waypoints.length;i++){
+        const w = route.waypoints[i];
+        const marker = L.marker([w.lat,w.lng], { icon: L.divIcon({ className:'', html:'<div class="vertex-handle"></div>', iconSize:[12,12], iconAnchor:[6,6] }), draggable:true });
+        // closure-friendly index via let
+        marker.on('drag', (e) => { route.waypoints[i].lat = e.latlng.lat; route.waypoints[i].lng = e.latlng.lng; route.polyline.setLatLngs(route.waypoints.map(p=>[p.lat,p.lng])); updatePreview(); });
+        marker.on('contextmenu', (ev) => {
+          L.DomEvent.stopPropagation(ev); ev.preventDefault();
+          if (i===0 || i===route.waypoints.length-1) { alert('Endpunkte sind Häfen und können hier nicht entfernt.'); return; }
+          if (!confirm('Waypoint löschen?')) return;
+          route.waypoints.splice(i,1);
+          createHandleMarkersForRoute(route);
+          route.polyline.setLatLngs(route.waypoints.map(p=>[p.lat,p.lng])); updatePreview();
+        });
+        marker.addTo(map); marker.remove(); arr.push(marker);
+      }
+      route.handleMarkers = arr;
+    }
+
+    function refreshRouteHandles(route) { createHandleMarkersForRoute(route); }
+
+    function enableRouteEditing(route) {
+      if (!route.handleMarkers || route.handleMarkers.length !== route.waypoints.length) createHandleMarkersForRoute(route);
+      route.handleMarkers.forEach(m=>m.addTo(map));
+      route.editing = true;
+      alert('Bearbeiten: Ziehe Punkte, Rechtsklick innerer Punkt = löschen. Enter = übernehmen.');
+    }
+
+    function disableRouteEditing(route) {
+      if (!route) return; if (route.handleMarkers) route.handleMarkers.forEach(m=>{ try { map.removeLayer(m); } catch(e){} });
+      route.editing = false; if (route.polyline) route.polyline.setLatLngs(route.waypoints.map(p=>[p.lat,p.lng])); updatePreview();
+    }
+
+    window.addEventListener('keydown', (ev)=>{
+      if (ev.key === 'Enter'){
+        let any=false;
+        for (const id in routes) {
+          if (routes[id].editing) { disableRouteEditing(routes[id]); any=true; }
+        }
+        if (any) alert('Änderungen übernommen.');
+      }
+    });
+
+    // Export / Import
+    function exportJSON() {
+      const out = { ports:[], routes:[] };
+      for (const id in ports) out.ports.push({ id: ports[id].id, name: ports[id].name, lat: ports[id].lat, lng: ports[id].lng });
+      for (const id in routes) out.routes.push({ id: routes[id].id, name: routes[id].name, sourceId: routes[id].sourceId, targetId: routes[id].targetId, waypoints: routes[id].waypoints });
+      return out;
+    }
+    function updatePreview(){ jsonPreview.value = JSON.stringify(exportJSON(), null, 2); }
+
+    document.getElementById('btnExport').addEventListener('click', ()=>{
+      const data = JSON.stringify(exportJSON(), null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='hanse-data.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // import UI wiring
+    btnImport.addEventListener('click', ()=> fileImport.click());
+    fileImport.addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader(); r.onload = (ev)=>{
+        try { const data = JSON.parse(ev.target.result); importData(data); } catch(err){ alert('Ungültiges JSON: '+(err.message||err)); }
+      }; r.readAsText(f);
+    });
+
+    function importData(obj){
+      // clear existing
+      for (const id in ports) try { map.removeLayer(ports[id].marker); } catch(e){}
+      for (const id in routes) try { if (routes[id].polyline) map.removeLayer(routes[id].polyline); if (routes[id].handleMarkers) routes[id].handleMarkers.forEach(h=>map.removeLayer(h)); } catch(e){}
+      Object.keys(ports).forEach(k=>delete ports[k]); Object.keys(routes).forEach(k=>delete routes[k]); nextPortId=1; nextRouteId=1;
+
+      // import ports (preserve ids if provided)
+      if (Array.isArray(obj.ports)){
+        for (const p of obj.ports){
+          const lat = Number(p.lat), lng = Number(p.lng);
+          if (!isFinite(lat) || !isFinite(lng)) { console.warn('Skipping invalid port coords', p); continue; }
+          const name = p.name || ('p'+nextPortId);
+          const temp = addPort(L.latLng(lat,lng), name);
+          if (p.id && p.id !== temp.id){
+            const given = String(p.id);
+            ports[given] = ports[temp.id]; ports[given].id = given; delete ports[temp.id]; temp.id = given;
+            const m = parseInt(given.replace(/^p/,'')); if (!isNaN(m)) nextPortId = Math.max(nextPortId, m+1);
+          } else {
+            const m = parseInt(temp.id.replace(/^p/,'')); if (!isNaN(m)) nextPortId = Math.max(nextPortId, m+1);
+          }
+        }
+      }
+
+      // import routes after ports exist
+      if (Array.isArray(obj.routes)){
+        for (const r of obj.routes){
+          const rid = r.id || ('r'+nextRouteId++);
+          const sourceId = r.sourceId, targetId = r.targetId;
+          if (!ports[sourceId] || !ports[targetId]) { console.warn('Skipping route, missing port:', r); continue; }
+          const wps = Array.isArray(r.waypoints) ? r.waypoints.map(w=>({ lat: Number(w.lat), lng: Number(w.lng) })).filter(w=>isFinite(w.lat)&&isFinite(w.lng)) : [];
+          // snap endpoints
+          if (wps.length===0 || wps[0].lat!==ports[sourceId].lat || wps[0].lng!==ports[sourceId].lng) wps.unshift({ lat: ports[sourceId].lat, lng: ports[sourceId].lng });
+          const last = wps[wps.length-1]; if (!last || last.lat!==ports[targetId].lat || last.lng!==ports[targetId].lng) wps.push({ lat: ports[targetId].lat, lng: ports[targetId].lng });
+          const route = { id: rid, name: r.name || (ports[sourceId].name+'-'+ports[targetId].name), sourceId, targetId, waypoints: wps, editing:false };
+          routes[rid] = route;
+          const poly = L.polyline(route.waypoints.map(p=>[p.lat,p.lng]), { color:'#0b3d91', weight:4 }).addTo(map);
+          route.polyline = poly; createHandleMarkersForRoute(route);
+          poly.on('click', ()=> editRoute(rid));
+          const m = parseInt(rid.replace(/^r/,'')); if (!isNaN(m)) nextRouteId = Math.max(nextRouteId, m+1);
+        }
+      }
+      refreshLists(); updatePreview();
+    }
+
+    function escapeHtml(s){ return (''+s).replace(/[&"'<>]/g, c=>({'&':'&amp;','"':'&quot;','"':'&quot;','<':'&lt;','>':'&gt;'}[c]||c)); }
+
+    // initial example
+    updatePreview();
+    const ex1 = addPort(L.latLng(53.545,8.097),'Wilhelmshaven');
+    const ex2 = addPort(L.latLng(54.185,7.896),'Helgoland');
+    const ex3 = addPort(L.latLng(51.127,1.308),'Dover');
+    // sample route
+    routeDrawing.sourceId = ex1.id; routeDrawing.waypoints = [{lat:ex1.lat,lng:ex1.lng},{lat:ex2.lat,lng:ex2.lng}]; finalizeRoute(ex2.id);
+  </script>
+</body>
+</html>
