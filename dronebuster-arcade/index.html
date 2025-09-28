@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<!-- 
+
+⚠️ DANGER! This is a prototype. Use at your own risk.
+
+Current Version: 2025-09-28_5.46
+Invented by: Wolfmond
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <https://unlicense.org/>
+
+-->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>DroneBuster Arcade</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>💥</text></svg>">
+  <meta name="description" content="DroneBuster Arcade — Open source retro arcade shooter. Shoot down enemy drones and collect points. Playable in your browser with touch and keyboard controls.">
+  <meta property="og:locale" content="en_GB">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DroneBuster Arcade — Retro Drone Shooter">
+<meta property="og:description" content="Open source retro arcade shooter: Destroy swarms of enemy drones and collect points. Free in your browser — touch and keyboard ready.">
+<meta property="og:url" content="https://wolfmond.github.io/dronebuster-arcade">
+<meta property="og:site_name" content="DroneBuster Arcade">
+<meta property="og:image" content="https://wolfmond.github.io/dronebuster-arcade/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="DroneBuster Arcade – Retro Jet shoots at a swarm of drones (artwork)">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ZzFX/2.29/ZzFX.micro.min.js"></script>
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; cursor:pointer;}
+    #map{position:fixed;inset:0}
+    .controls{position:fixed;left:0;right:0;bottom:0;pointer-events:none;z-index:10010;}
+    .dpad {
+	  --dpad-size: 140px;
+	  --btn-size: 64px;
+	  --gap: 12px;                /* Abstand zwischen Mitte und Button-Rand; anpassen nach Geschmack */
+	  position: fixed;
+	  left: 12px;
+	  bottom: 12px;
+	  width: var(--dpad-size);
+	  height: var(--dpad-size);
+	  border-radius: 12px;
+	  pointer-events: auto;
+	  display: block;
+	  touch-action: none;
+	}
+	
+html, body, .controls, .dpad .btn, .fire, button {
+  -webkit-tap-highlight-color: transparent; /* Android/Chrome/Safari */
+  -webkit-touch-callout: none;               /* iOS: kein Callout (z.B. "Link kopieren") */
+  -webkit-user-select: none;
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;                 /* verhindert standardmäßige tap-highlights/gestures */
+  outline: none;
+}
+
+	/* Gemeinsame Button-Stile */
+	.dpad .btn {
+	  position: absolute;
+	  width: var(--btn-size);
+	  height: var(--btn-size);
+	  border-radius: 12px;
+	  background: rgba(0,0,0,0.4);
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  color: white;
+	  user-select: none;
+	  touch-action: none;
+	  -webkit-tap-highlight-color: transparent;
+	  transition: transform .06s ease, background .06s ease;
+	}
+
+	/* Buttons gleich um die Mitte platzieren:
+	   - Wir berechnen Positionen relativ zur Mitte (50%)
+	   - translate(-50%,-50%) zentriert das Element an dieser Position */
+	.dpad .btn[data-dir="up"] {
+	  left: 50%;
+	  top: calc(50% - (var(--btn-size) / 2) - var(--gap));
+	  transform: translate(-50%, -50%);
+	}
+	.dpad .btn[data-dir="down"] {
+	  left: 50%;
+	  top: calc(50% + (var(--btn-size) / 2) + var(--gap));
+	  transform: translate(-50%, -50%);
+	}
+	.dpad .btn[data-dir="left"] {
+	  left: calc(50% - (var(--btn-size) / 2) - var(--gap));
+	  top: 50%;
+	  transform: translate(-50%, -50%);
+	}
+	.dpad .btn[data-dir="right"] {
+	  left: calc(50% + (var(--btn-size) / 2) + var(--gap));
+	  top: 50%;
+	  transform: translate(-50%, -50%);
+	}
+
+	/* Feedback bei Druck */
+	.dpad .btn:active,
+	.dpad .btn.pressed {
+	  background: rgba(255,255,255,0.14);
+	  transform: translate(-50%, -50%) scale(0.97);
+	}
+
+	/* Optional: leichter Shadow / bessere Lesbarkeit */
+	.dpad .btn {
+	  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+	}
+    .fire{position:fixed;right:12px;bottom:12px;width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(0,0,0,0.45));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;pointer-events:auto;touch-action:none;transition: transform .06s ease, background .06s ease}
+    .fire:active{transform:scale(0.98)}
+    .fire.pressed{ background: rgba(255,255,255,0.22); transform: scale(0.97); }
+
+    /* HUD */
+    .hud-left{position:fixed;left:12px;top:12px;background:rgba(255,255,255,0.9);padding:6px 10px;border-radius:8px;font-size:14px;z-index:10020;;display:flex;align-items:center;gap:8px}
+    .hud-right{position:fixed;right:12px;top:12px;background:rgba(255,255,255,0.9);padding:6px 10px;border-radius:8px;font-size:14px;z-index:10020;display:flex;align-items:center;gap:8px}
+    .heart{width:24px;height:24px;display:inline-block}
+    .heart.empty{opacity:0.25;filter:grayscale(1)}
+    .kills{font-weight:700}
+
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);color:white;font-size:28px;z-index:10030;display:none}
+
+    /* Start screen */
+    .start-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(0,0,0,0.75), rgba(0,0,0,0.6));z-index:10050;}
+    .start-card{background:rgba(255,255,255,0.96);color:#0b3d91;padding:24px;border-radius:12px;max-width:520px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.4);margin:2em;}
+    .start-card h1{margin:0 0 8px;font-size:28px}
+    .start-card p{margin:0 0 18px;color:#0b3d91cc}
+    .start-card button{background:#0b3d91;color:white;border:0;padding:12px 18px;border-radius:8px;font-size:16px;cursor:pointer}
+    .start-card button:active{transform:translateY(1px)}
+	
+	/* Schein nach außen (Glow) */
+.leaflet-container .bullet-marker {
+  /* fill und stroke werden trotzdem von Leaflet gesetzt, filter erzeugt den Schein */
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.95))
+          drop-shadow(0 0 16px rgba(255,255,255,0.6));
+  /* optionaler leichter Blur für glatteren Look */
+  /* shape-rendering: geometricPrecision; */
+}
+
+.leaflet-container .enemy-marker {
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.95))
+          drop-shadow(0 0 16px rgba(255,255,255,0.6));
+		  }
+
+.leaflet-container .fighter-marker {
+  filter: drop-shadow(0 0 16px rgba(255,255,255,0.95))
+          drop-shadow(0 0 32px rgba(255,255,255,0.6));
+		  }
+		  
+.leaflet-container .exploded {
+  filter: drop-shadow(0 0 16px rgba(255,0,0,0.95))
+          drop-shadow(0 0 32px rgba(255,0,0,0.6));
+		  }
+
+
+.leaflet-container .leaflet-tile {
+	filter: hue-rotate(var(--map-hue, 0deg))
+	saturate(var(--map-sat, 1))
+	contrast(var(--map-contrast, 1))
+	brightness(var(--map-bright, 1))
+	invert(var(--map-invert, 0))
+	sepia(var(--map-sepia, 0))
+	grayscale(var(--map-gray, 0))
+	blur(var(--map-blur, 0px))
+	drop-shadow(var(--map-shadow-x,0px) var(--map-shadow-y,0px) var(--map-shadow-blur,0px) var(--map-shadow-color,transparent));
+	transition: filter 400ms ease;
+}
+
+.bold {
+	font-weight:800;
+}
+
+html.pseudo-fullscreen, html.in-fullscreen {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+
+html.pseudo-fullscreen #map,
+html.in-fullscreen #map {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999;
+}
+
+/* optional: verberge Start-Screen/Controls beim simulierten Fullscreen (falls gewünscht) */
+html.pseudo-fullscreen .start-screen,
+html.in-fullscreen .start-screen {
+  display: none !important;
+}
+
+html.pseudo-fullscreen .controls,
+html.in-fullscreen .controls {
+  z-index: 10010;
+}
+
+/* Verhindere Auswahl / Callout für Score, HUD und Controls */
+.kills,
+.hud-left,
+.hud-right,
+.controls,
+.dpad .btn,
+.fire,
+.start-card button {
+  user-select: none;           /* Standard */
+  -webkit-user-select: none;   /* Safari/Chrome iOS */
+  -moz-user-select: none;      /* Firefox */
+  -ms-user-select: none;       /* IE/Edge */
+  -webkit-touch-callout: none; /* iOS long-press menu */
+  -webkit-user-drag: none;     /* verhindert Drag von Bildern/SVG */
+  touch-action: manipulation;  /* verhindert gewisse native gestures */
+}
+
+.kills * { 
+  user-select: none;
+  -webkit-user-select: none;
+}
+  </style>
+</head>
+<body>
+<div id="gameRoot">
+  <div id="map"></div>
+
+  <div class="hud-left">
+    Score: <div class="kills" id="kills">0</div>
+  </div>
+  <div class="hud-right" id="hearts">
+    <!-- filled hearts; will be updated by JS -->
+    <svg class="heart" height="24px" viewBox="0 -960 960 960" width="24px" fill="#cc0000"> <defs id="defs830" /> <path d="m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Zm0-108q96-86 158-147.5t98-107q36-45.5 50-81t14-70.5q0-60-40-100t-100-40q-47 0-87 26.5T518-680h-76q-15-41-55-67.5T300-774q-60 0-100 40t-40 100q0 35 14 70.5t50 81q36 45.5 98 107T480-228Zm0-273Z" id="path824" /> <path style="opacity:0.8;fill:#ff0000;stroke:#000000;stroke-width:0.0991352;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:29.7449;paint-order:stroke fill markers" d="m 16.425973,4.4574795 c -1.510493,0.023909 -3.00024,0.9394144 -3.611851,2.3370902 -0.542748,0 -1.085496,0 -1.628244,0 C 10.80176,5.9175878 10.077365,5.2182869 9.205809,4.8306987 8.0489809,4.3158912 6.6181467,4.2984427 5.5301361,4.995633 4.4998684,5.5986157 3.8040238,6.7737277 3.8331626,7.9759221 3.7139718,9.3763003 4.4035941,10.687854 5.2274605,11.769124 c 1.5636303,2.030719 3.4742387,3.757813 5.3448525,5.497501 0.454217,0.384609 0.852457,0.842406 1.336669,1.187866 0.29749,0.05802 0.479516,-0.283676 0.702196,-0.42691 1.701323,-1.558112 3.395735,-3.130565 4.961907,-4.82623 1.078444,-1.214318 2.219836,-2.526289 2.536887,-4.1701864 C 20.21908,8.3198025 20.211888,7.5691105 19.997471,6.8780661 19.543257,5.5050888 18.192255,4.5186783 16.752988,4.4632855 c -0.108876,-0.00627 -0.217984,-0.00814 -0.327015,-0.00581 z" id="path949" transform="matrix(40,0,0,40,0,-960)" /> </svg>
+    <svg class="heart" height="24px" viewBox="0 -960 960 960" width="24px" fill="#cc0000"> <defs id="defs830" /> <path d="m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Zm0-108q96-86 158-147.5t98-107q36-45.5 50-81t14-70.5q0-60-40-100t-100-40q-47 0-87 26.5T518-680h-76q-15-41-55-67.5T300-774q-60 0-100 40t-40 100q0 35 14 70.5t50 81q36 45.5 98 107T480-228Zm0-273Z" id="path824" /> <path style="opacity:0.8;fill:#ff0000;stroke:#000000;stroke-width:0.0991352;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:29.7449;paint-order:stroke fill markers" d="m 16.425973,4.4574795 c -1.510493,0.023909 -3.00024,0.9394144 -3.611851,2.3370902 -0.542748,0 -1.085496,0 -1.628244,0 C 10.80176,5.9175878 10.077365,5.2182869 9.205809,4.8306987 8.0489809,4.3158912 6.6181467,4.2984427 5.5301361,4.995633 4.4998684,5.5986157 3.8040238,6.7737277 3.8331626,7.9759221 3.7139718,9.3763003 4.4035941,10.687854 5.2274605,11.769124 c 1.5636303,2.030719 3.4742387,3.757813 5.3448525,5.497501 0.454217,0.384609 0.852457,0.842406 1.336669,1.187866 0.29749,0.05802 0.479516,-0.283676 0.702196,-0.42691 1.701323,-1.558112 3.395735,-3.130565 4.961907,-4.82623 1.078444,-1.214318 2.219836,-2.526289 2.536887,-4.1701864 C 20.21908,8.3198025 20.211888,7.5691105 19.997471,6.8780661 19.543257,5.5050888 18.192255,4.5186783 16.752988,4.4632855 c -0.108876,-0.00627 -0.217984,-0.00814 -0.327015,-0.00581 z" id="path949" transform="matrix(40,0,0,40,0,-960)" /> </svg>
+    <svg class="heart" height="24px" viewBox="0 -960 960 960" width="24px" fill="#cc0000"> <defs id="defs830" /> <path d="m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Zm0-108q96-86 158-147.5t98-107q36-45.5 50-81t14-70.5q0-60-40-100t-100-40q-47 0-87 26.5T518-680h-76q-15-41-55-67.5T300-774q-60 0-100 40t-40 100q0 35 14 70.5t50 81q36 45.5 98 107T480-228Zm0-273Z" id="path824" /> <path style="opacity:0.8;fill:#ff0000;stroke:#000000;stroke-width:0.0991352;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:29.7449;paint-order:stroke fill markers" d="m 16.425973,4.4574795 c -1.510493,0.023909 -3.00024,0.9394144 -3.611851,2.3370902 -0.542748,0 -1.085496,0 -1.628244,0 C 10.80176,5.9175878 10.077365,5.2182869 9.205809,4.8306987 8.0489809,4.3158912 6.6181467,4.2984427 5.5301361,4.995633 4.4998684,5.5986157 3.8040238,6.7737277 3.8331626,7.9759221 3.7139718,9.3763003 4.4035941,10.687854 5.2274605,11.769124 c 1.5636303,2.030719 3.4742387,3.757813 5.3448525,5.497501 0.454217,0.384609 0.852457,0.842406 1.336669,1.187866 0.29749,0.05802 0.479516,-0.283676 0.702196,-0.42691 1.701323,-1.558112 3.395735,-3.130565 4.961907,-4.82623 1.078444,-1.214318 2.219836,-2.526289 2.536887,-4.1701864 C 20.21908,8.3198025 20.211888,7.5691105 19.997471,6.8780661 19.543257,5.5050888 18.192255,4.5186783 16.752988,4.4632855 c -0.108876,-0.00627 -0.217984,-0.00814 -0.327015,-0.00581 z" id="path949" transform="matrix(40,0,0,40,0,-960)" /> </svg>
+  </div>
+
+  <div class="controls">
+    <div class="dpad" id="dpad">
+      <div class="btn" data-dir="up">▲</div>
+      <div class="btn" data-dir="down">▼</div>
+      <div class="btn" data-dir="left">◀</div>
+      <div class="btn" data-dir="right">▶</div>
+    </div>
+    <div class="fire" id="fire">●</div>
+  </div>
+
+  <div class="overlay" id="overlay">GAME OVER — Try again 😎👍</div>
+
+  <!-- Start screen (visible before game start) -->
+  <div class="start-screen" id="startScreen">
+    <div class="start-card">
+      <h1>DroneBuster Arcade</h1>
+      <h3><p>Shoot down enemy drones, protect the country.</p><p>Arcade style.</p></h3>
+	  <p>Move: Arrow Keys. Shoot: Space. (or use the buttons on the screen).</p>
+      <div style="font-size:13px;color:#0b3d91cc;margin-bottom:18px"><p class="bold">THANKS:</p><p><span class="bold">Sound:</span> <a href="https://github.com/KilledByAPixel/ZzFX" target="_blank" rel="noreferrer">ZzFX</a></p><p><span class="bold">Map-Software:</span> <a href="https://leafletjs.com" title="A JavaScript library for interactive maps"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8" class="leaflet-attribution-flag"><path fill="#4C7BE1" d="M0 0h12v4H0z"></path><path fill="#FFD500" d="M0 4h12v3H0z"></path><path fill="#E0BC00" d="M0 7h12v1H0z"></path></svg> Leaflet</a><p><p><span class="bold">Map:</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">	© OpenStreetMap contributors</a></p><p>Free &amp; open-source Game<br>built by Wolfmond&nbsp;✨🐺🌙✨ as a hobby project.</p></div>
+      <button id="startBtn" autofocus>Start Game</button>
+    </div>
+  </div>
+</div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // CONFIG
+    const MAP_CENTER = [56.0, 10.0];
+    const MAP_ZOOM = 7;
+    const INITIAL_POS = MAP_CENTER;
+    const FIGHTER_ICON_SIZE = [48, 36];
+    const FIGHTER_SPEED_PX_PER_S = 160;
+    const BULLET_SPEED_PX_PER_S = 450;
+    const BULLET_LIFETIME_MS = 6000;
+    const ENEMY_SPEED_PX_PER_S = 60;
+    const ENEMY_WAIT_MS = 10000;
+
+    // Spawn tuning (base values)
+    const BASE_SPAWN_MS = 5500;     // Ausgangsintervall (dein 5500)
+    const MIN_SPAWN_MS = 1800;      // Minimalwert (Limit)
+    const SPAWN_DECAY_RATE = 0.01;  // Rate der exponentiellen Abnahme (kleiner = langsamer)
+
+    // Difficulty multiplier (einfacher <1, normal 1, härter >1)
+    // Beispiel: 0.8 = leichter (Spawns langsamer), 1 = normal, 1.5 = härter
+    let DIFFICULTY = 1.5;
+
+    // MAP
+    const map = L.map('map', { zoomControl:false, attributionControl:false}).setView(MAP_CENTER, MAP_ZOOM);
+    map.dragging.disable();
+    map.scrollWheelZoom.disable();
+    map.doubleClickZoom.disable();
+    map.boxZoom.disable();
+    map.touchZoom.disable();
+    if (map.tap) map.tap.disable();
+    map.keyboard.disable();
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:7, minZoom:7, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>'}).addTo(map);
+
+    // SFX helper (zzfx) — audioUnlocked sorgt dafür, dass SFX erst nach User-Klick abgespielt werden
+    window.zzfxV = window.zzfxV || 0.6;
+	const SFX_PRESETS = { enemyIncoming:[.1,0,65.40639,.19,2,3,2,1.4,,,,,,.2,,,,.88,.13,,-1171], shoot:[0.5,0,429,.01,.11,.09,,.6,15,18], explosion1:[,,70,.08,.2,.4,4,3.5,-1,8,,,,1.9,10,.5,,.37,.18,,100], explosion2:[2,1,65,.03,.16,.52,3,1.7,8,,,,,1,,.5,.42,.45,.11] };
+    let audioUnlocked = false;
+    function playSfx(name){ if (!audioUnlocked) return; if (typeof zzfx !== 'function') return; try{ const preset = SFX_PRESETS[name]; if (!preset) return; zzfx(...preset); }catch(e){console.warn(e);} }
+
+    // screen bounds
+    let screenBounds = null; function updateScreenBounds(){ const size = map.getSize(); const topLeft = map.containerPointToLatLng([0,0]); const bottomRight = map.containerPointToLatLng([size.x, size.y]); screenBounds = L.latLngBounds(bottomRight, topLeft); }
+    map.whenReady(()=>{ setTimeout(()=>{ map.invalidateSize(); updateScreenBounds(); }, 250); });
+    window.addEventListener('resize', ()=>{ updateScreenBounds(); });
+
+    // fighter
+    const fighterHtml = `<svg width="${FIGHTER_ICON_SIZE[0]}" height="${FIGHTER_ICON_SIZE[1]}" viewBox="0 0 48 36" xmlns="http://www.w3.org/2000/svg"><polygon points="6,4 42,18 6,32" fill="#2b6cb0" stroke="#0b3d91" stroke-width="1"/></svg>`;
+    const fighterIcon = L.divIcon({className:'fighter-icon', html: fighterHtml, className: 'fighter-marker', iconSize:FIGHTER_ICON_SIZE, iconAnchor:[FIGHTER_ICON_SIZE[0]/2,FIGHTER_ICON_SIZE[1]/2]});
+    const fighter = L.marker(INITIAL_POS, {icon: fighterIcon, interactive:false}).addTo(map);
+    let fighterLatLng = L.latLng(INITIAL_POS);
+    function clampLatLngToBounds(latlng){ if (!screenBounds) return latlng; const sw = screenBounds.getSouthWest(); const ne = screenBounds.getNorthEast(); const lat = Math.max(Math.min(latlng.lat, ne.lat), sw.lat); const lng = Math.max(Math.min(latlng.lng, ne.lng), sw.lng); return L.latLng(lat,lng); }
+    fighterLatLng = clampLatLngToBounds(fighterLatLng); fighter.setLatLng(fighterLatLng);
+
+    // HUD state
+    const heartsContainer = document.getElementById('hearts'); const killsEl = document.getElementById('kills'); const overlay = document.getElementById('overlay');
+    let maxLives = 3;
+    let lives = 3;
+    let killCount = 0;
+    let invulnerableUntil = 0;
+    let gameOver = false;
+    let gameStarted = false; // <- only allow controls after game start to avoid accidental pre-start input
+
+    function updateHearts(){ const svgs = heartsContainer.querySelectorAll('.heart'); svgs.forEach((el, i)=>{ if (i < lives) el.classList.remove('empty'); else el.classList.add('empty'); }); }
+    function updateKills(){ killsEl.textContent = String(killCount); }
+    updateHearts(); updateKills();
+
+    function killFighterAndRespawn(){ if (performance.now() < invulnerableUntil) return; lives = Math.max(0, lives - 1); updateHearts(); playSfx('explosion1'); if (lives <= 0){gameOver = true; overlay.style.display = 'flex'; exitFullscreen(); if (typeof spawnTimer !== 'undefined' && spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; } return;
+} fighterLatLng = L.latLng(INITIAL_POS); fighter.setLatLng(fighterLatLng); invulnerableUntil = performance.now() + 1500; if (fighter._icon) fighter._icon.style.opacity = '0.5'; setTimeout(()=>{ if (fighter._icon) fighter._icon.style.opacity = '1'; }, 1500); }
+
+    // controls
+    const dirs = {up:false,down:false,left:false,right:false}; const dpad = document.getElementById('dpad'); const fireBtn = document.getElementById('fire');
+    function bindMultiPointerButtons(container){
+      container.querySelectorAll('.btn').forEach(btn=>{
+        const dir = btn.getAttribute('data-dir');
+        btn.addEventListener('pointerdown', e=>{
+          e.preventDefault();
+          dirs[dir]=true;
+          btn.classList.add('pressed');
+          try{ btn.setPointerCapture(e.pointerId); }catch(_){}
+        });
+        btn.addEventListener('pointerup', e=>{
+          e.preventDefault();
+          dirs[dir]=false;
+          btn.classList.remove('pressed');
+          try{btn.releasePointerCapture(e.pointerId);}catch(_){} 
+        });
+        btn.addEventListener('pointercancel', ()=>{
+          dirs[dir]=false;
+          btn.classList.remove('pressed');
+        });
+      });
+    }
+    bindMultiPointerButtons(dpad);
+
+    let firing=false;
+    fireBtn.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      firing=true;
+      fireBtn.classList.add('pressed');
+      try{ fireBtn.setPointerCapture(e.pointerId); }catch(_){}
+      shoot();
+    });
+    fireBtn.addEventListener('pointerup', e=>{
+      e.preventDefault();
+      firing=false;
+      fireBtn.classList.remove('pressed');
+      try{fireBtn.releasePointerCapture(e.pointerId);}catch(_){} 
+    });
+    fireBtn.addEventListener('pointercancel', ()=>{
+      firing=false;
+      fireBtn.classList.remove('pressed');
+    });
+
+    // keyboard support: Arrow keys (plus WASD) and Space
+    // helper to toggle dir and button pressed class
+	function setDirButtonState(dir, value, visual = true){
+	  dirs[dir] = !!value;
+	  if (!visual) return; // nur Status ändern, kein visuelles Feedback
+	  const btn = dpad.querySelector(`.btn[data-dir="${dir}"]`);
+	  if (btn){
+		if (value) btn.classList.add('pressed'); else btn.classList.remove('pressed');
+	  }
+	}
+
+
+    window.addEventListener('keydown', (e)=>{
+      // only allow controls when game started and not gameOver
+      if (!gameStarted || gameOver) {
+        // But if game not started and start screen visible, let Enter/Space start the game? -- we avoid auto-start here.
+        // return early so keys don't affect game before start
+      }
+      // handle keys even if game not started in order to prevent page scroll for arrows and space
+      const code = e.code;
+      let handled = false;
+      switch(code){
+        case 'ArrowUp': setDirButtonState('up', true, false); handled = true; break;
+		case 'ArrowDown': setDirButtonState('down', true, false); handled = true; break;
+		case 'ArrowLeft': setDirButtonState('left', true, false); handled = true; break;
+		case 'ArrowRight': setDirButtonState('right', true, false); handled = true; break;
+		case 'KeyW': setDirButtonState('up', true, false); handled = true; break;
+		case 'KeyS': setDirButtonState('down', true, false); handled = true; break;
+		case 'KeyA': setDirButtonState('left', true, false); handled = true; break;
+		case 'KeyD': setDirButtonState('right', true, false); handled = true; break;
+		case 'Space':
+		  if (gameStarted && !gameOver && !firing){
+			firing = true;
+			// KEIN visuelles Feedback für Keyboard (nur Pointer macht das)
+			shoot();
+		  }
+		  handled = true;
+		  break;
+
+      }
+      if (handled) e.preventDefault();
+    });
+
+    window.addEventListener('keyup', (e)=>{
+      const code = e.code;
+      let handled = false;
+      switch(code){
+        case 'ArrowUp': setDirButtonState('up', false, false); handled = true; break;
+		case 'ArrowDown': setDirButtonState('down', false, false); handled = true; break;
+		case 'ArrowLeft': setDirButtonState('left', false, false); handled = true; break;
+		case 'ArrowRight': setDirButtonState('right', false, false); handled = true; break;
+		case 'KeyW': setDirButtonState('up', false, false); handled = true; break;
+		case 'KeyS': setDirButtonState('down', false, false); handled = true; break;
+		case 'KeyA': setDirButtonState('left', false, false); handled = true; break;
+		case 'KeyD': setDirButtonState('right', false, false); handled = true; break;
+        case 'Space':
+          firing = false;
+          fireBtn.classList.remove('pressed');
+          handled = true;
+          break;
+      }
+      if (handled) e.preventDefault();
+    });
+
+    // if window loses focus, reset inputs so keys don't get stuck
+    window.addEventListener('blur', ()=>{
+      ['up','down','left','right'].forEach(d=> setDirButtonState(d,false));
+      firing = false;
+      fireBtn.classList.remove('pressed');
+    });
+
+    // bullets
+	const bullets = [];
+	function shoot(){
+	  if (gameOver || !gameStarted) return;
+	  playSfx('shoot');
+
+	  const fighterPt = map.latLngToContainerPoint(fighterLatLng);
+	  const tipOffset = FIGHTER_ICON_SIZE[0]/2 + 6;
+	  const tipPt = L.point(fighterPt.x + tipOffset, fighterPt.y);
+	  const tipLatLng = map.containerPointToLatLng(tipPt);
+
+	  const marker = L.circleMarker(tipLatLng, {
+		radius: 5,
+		fill: true,
+		fillColor: '#ffffff',     // weißer Kern
+		fillOpacity: 1,
+		color: '#ffffff',         // weißer Rand
+		weight: 1,
+		interactive: false,
+		className: 'bullet-marker' // eigene Klasse für CSS-Glow
+	  }).addTo(map);
+
+	  bullets.push({ latlng: tipLatLng, marker, createdAt: performance.now() });
+
+	  if (firing) setTimeout(()=>{ if (firing) shoot(); }, 160);
+	}
+
+
+    // country geojson
+    let landGeo = null; fetch('country.json').then(r=>r.json()).then(geo=>{ landGeo = geo; L.geoJSON(geo, {interactive:false, style:{color:'#9ca3af', weight:1, fillColor:'#e6f7ff', fillOpacity:0}}).addTo(map); }).catch(err=>{ console.error('Failed to load country.json', err); });
+
+    // random point inside geojson
+    function randomPointInGeoJSON(geo){ if (!geo || !geo.features || geo.features.length===0) return null; const layer = L.geoJSON(geo); const bounds = layer.getBounds(); if (!bounds || !bounds.isValid()) return null; const minLat = bounds.getSouth(), maxLat = bounds.getNorth(), minLng = bounds.getWest(), maxLng = bounds.getEast(); for (let i=0;i<500;i++){ const lat = minLat + Math.random()*(maxLat-minLat); const lng = minLng + Math.random()*(maxLng-minLng); if (pointInGeoJSON([lng, lat], geo)) return [lat, lng]; } return null; }
+    function pointInGeoJSON(pt, geo){ for (const f of geo.features) if (pointInFeature(pt,f)) return true; return false; }
+    function pointInFeature(pt, feature){ const geom = feature.geometry; if (geom.type==='Polygon') return pointInPolygon(pt, geom.coordinates[0]); if (geom.type==='MultiPolygon') return geom.coordinates.some(p => pointInPolygon(pt, p[0])); return false; }
+    function pointInPolygon(pt, vs){ const x=pt[0], y=pt[1]; let inside=false; for (let i=0,j=vs.length-1;i<vs.length;j=i++){ const xi=vs[i][0], yi=vs[i][1]; const xj=vs[j][0], yj=vs[j][1]; const intersect = ((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi); if (intersect) inside = !inside; } return inside; }
+
+    // enemies
+    const enemies = new Map(); let nextEnemyId = 0;
+
+    function startEnemySpawning(){
+      // small intro wave
+      for (let i=0;i<3;i++) setTimeout(()=>createEnemy(), i*600);
+      if (typeof spawnTimer !== 'undefined' && spawnTimer) clearTimeout(spawnTimer);
+      scheduleNextSpawn();
+    }
+
+    function createEnemy(){ if (!landGeo) return; const dest = randomPointInGeoJSON(landGeo); if (!dest) return; const destLatLng = L.latLng(dest[0], dest[1]); const size = map.getSize(); const topLatLng = map.containerPointToLatLng([size.x + 100, 0]); const bottomLatLng = map.containerPointToLatLng([size.x + 100, size.y]); const lat = bottomLatLng.lat + Math.random()*(topLatLng.lat - bottomLatLng.lat); const lng = map.getBounds().getEast() + (0.5 + Math.random()*1.5); const startLatLng = L.latLng(lat, lng); const id = ++nextEnemyId; const radius = 6; const marker = L.circleMarker(startLatLng, {radius, color:'#ff4d4d', fillColor:'#ff4d4d', fillOpacity:1, weight:1, className: 'enemy-marker'}).addTo(map); const enemy = { id, marker, destLatLng, state:'flying', radius, createdAt: performance.now(), incomingTicker: null, waitTimer: null }; enemies.set(id, enemy); enemy.incomingTicker = setInterval(()=>{ playSfx('enemyIncoming'); }, 700); }
+
+    // berechnet das aktuelle Intervall basierend auf killCount (exponentieller Decay)
+    // DIFFICULTY skaliert Basis/min und decay: größer = härter (kürzere Intervalle)
+    function getSpawnIntervalMs() {
+      const k = SPAWN_DECAY_RATE * DIFFICULTY;
+      const base = BASE_SPAWN_MS / DIFFICULTY;
+      const min = MIN_SPAWN_MS / DIFFICULTY;
+      const decay = Math.exp(-k * killCount);
+      const interval = min + (base - min) * decay;
+      return Math.round(interval);
+    }
+
+    // wir nutzen setTimeout um das nächste Spawn dynamisch zu planen
+    let spawnTimer = null;
+    function scheduleNextSpawn() {
+      if (gameOver) return;
+      const delay = getSpawnIntervalMs();
+      spawnTimer = setTimeout(() => {
+        if (!gameOver) createEnemy();
+        scheduleNextSpawn();
+      }, delay);
+    }
+
+    // loop
+    let lastTime = null; function gameLoop(ts){ if (!lastTime) lastTime = ts; const dt = (ts - lastTime)/1000; lastTime = ts; if (!gameOver) updateFighter(dt); updateBullets(dt); updateEnemies(dt); requestAnimationFrame(gameLoop); } requestAnimationFrame(gameLoop);
+
+    function updateFighter(dt){ let dx=0, dy=0; if (dirs.right) dx+=1; if (dirs.left) dx-=1; if (dirs.up) dy-=1; if (dirs.down) dy+=1; if (dx!==0 && dy!==0){ const inv = 1/Math.sqrt(2); dx*=inv; dy*=inv; } if (dx!==0 || dy!==0){ const curPt = map.latLngToContainerPoint(fighterLatLng); const moveX = dx * FIGHTER_SPEED_PX_PER_S * dt; const moveY = dy * FIGHTER_SPEED_PX_PER_S * dt; const newPt = L.point(curPt.x + moveX, curPt.y + moveY); let newLat = map.containerPointToLatLng(newPt); newLat = clampLatLngToBounds(newLat); fighterLatLng = newLat; fighter.setLatLng(fighterLatLng); } }
+
+    function updateBullets(dt){ for (let i=bullets.length-1;i>=0;i--){ const b = bullets[i]; const elapsed = performance.now() - b.createdAt; const pt = map.latLngToContainerPoint(b.latlng); const moveX = BULLET_SPEED_PX_PER_S * dt; const newPt = L.point(pt.x + moveX, pt.y); const newLat = map.containerPointToLatLng(newPt); b.latlng = newLat; b.marker.setLatLng(newLat); const margin = 60; const size = map.getSize(); if (newPt.x > size.x + margin || newPt.x < -margin || newPt.y > size.y + margin || newPt.y < -margin || elapsed > BULLET_LIFETIME_MS){ try{ map.removeLayer(b.marker); }catch(_){} bullets.splice(i,1); continue; }
+        // bullets only damage non-landed (red) enemies
+        for (const [id, e] of enemies){ if (e.state === 'landed') continue; const bPt = map.latLngToContainerPoint(b.latlng); const ePt = map.latLngToContainerPoint(e.marker.getLatLng()); const dx = bPt.x - ePt.x; const dy = bPt.y - ePt.y; const d2 = dx*dx + dy*dy; const br = (typeof b.marker.getRadius === 'function') ? b.marker.getRadius() : 6; const er = (typeof e.marker.getRadius === 'function') ? e.marker.getRadius() : e.radius; const hitDist = br + er; if (d2 <= hitDist*hitDist){ // bullet hit a red (active) enemy
+              playSfx('explosion1'); // bullet explosion
+              // cleanup enemy
+              if (e.incomingTicker){ clearInterval(e.incomingTicker); e.incomingTicker = null; }
+              if (e.waitTimer){ clearTimeout(e.waitTimer); e.waitTimer = null; }
+              map.removeLayer(e.marker); enemies.delete(id);
+              // remove bullet
+              try{ map.removeLayer(b.marker); }catch(_){ }
+              bullets.splice(i,1);
+              // increment kills
+              killCount += 1; updateKills();
+              // optional: adapt next spawn immediately (uncomment to disable)
+              if (typeof spawnTimer !== 'undefined' && spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; scheduleNextSpawn(); }
+              break; }
+        }
+    } }
+
+    function updateEnemies(dt){ for (const [id, e] of Array.from(enemies)){ if (!map.hasLayer(e.marker)){ enemies.delete(id); continue; } const curLatLng = e.marker.getLatLng(); // collision with fighter only for non-landed enemies
+        const ePt = map.latLngToContainerPoint(curLatLng); const fPt = map.latLngToContainerPoint(fighterLatLng); const dx = ePt.x - fPt.x; const dy = ePt.y - fPt.y; const dist2 = dx*dx + dy*dy; const er = (typeof e.marker.getRadius==='function') ? e.marker.getRadius() : e.radius; const fr = Math.max(FIGHTER_ICON_SIZE[0], FIGHTER_ICON_SIZE[1])/3; if (dist2 <= (er+fr)*(er+fr)){
+          if (e.state !== 'landed' && performance.now() >= invulnerableUntil){ // collision with active enemy -> damage fighter and remove enemy
+            if (e.incomingTicker){ clearInterval(e.incomingTicker); e.incomingTicker=null; }
+            if (e.waitTimer){ clearTimeout(e.waitTimer); e.waitTimer = null; }
+            map.removeLayer(e.marker); enemies.delete(id);
+            killFighterAndRespawn();
+            continue;
+          }
+          // if landed: ignore collision
+        }
+
+        if (e.state === 'flying'){
+          const curPt = map.latLngToContainerPoint(curLatLng);
+          const destPt = map.latLngToContainerPoint(e.destLatLng);
+          const vec = L.point(destPt.x - curPt.x, destPt.y - curPt.y);
+          const dist = Math.sqrt(vec.x*vec.x + vec.y*vec.y);
+          if (dist < 6){ // arrived
+            e.state = 'waiting'; if (e.incomingTicker){ clearInterval(e.incomingTicker); e.incomingTicker=null; }
+            e.waitTimer = setTimeout(()=>{
+              if (!enemies.has(id)) return; playSfx('explosion2'); e.marker.setStyle({color:'black', fillColor:'black'});   
+			if (e.marker._path) {   e.marker._path.classList.remove('enemy-marker');   e.marker._path.classList.add('exploded'); } else {   e.marker.once('add', () => {     if (e.marker._path) {       e.marker._path.classList.remove('enemy-marker');       e.marker._path.classList.add('exploded');     }   });}
+
+			  
+			  
+			  if (typeof e.marker.setRadius === 'function') e.marker.setRadius(e.radius*3); e.state = 'landed'; e.waitTimer = null;
+            }, ENEMY_WAIT_MS);
+            continue;
+          }
+          // move
+          const move = ENEMY_SPEED_PX_PER_S * dt; const nx = curPt.x + (vec.x/dist)*move; const ny = curPt.y + (vec.y/dist)*move; const newLat = map.containerPointToLatLng(L.point(nx, ny)); e.marker.setLatLng(newLat);
+        }
+        // landed enemies remain; bullets will not affect them (per request)
+    } }
+
+    // start spawning only after player pressed Start
+    // setTimeout(()=>{ startEnemySpawning(); }, 600);
+
+    // debug
+    window.spawnEnemy = createEnemy;
+    window.resetGame = ()=>{ 
+      if (typeof spawnTimer !== 'undefined' && spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
+      for (const [id,e] of enemies){ try{ if (e.incomingTicker) clearInterval(e.incomingTicker); if (e.waitTimer) clearTimeout(e.waitTimer); map.removeLayer(e.marker);}catch(_){} } enemies.clear(); bullets.forEach(b=>{ try{ map.removeLayer(b.marker); }catch(_){} }); bullets.length=0; lives = maxLives; killCount = 0; updateHearts(); updateKills(); overlay.style.display='none'; gameOver=false; invulnerableUntil = 0; map.invalidateSize(); gameStarted = true; startEnemySpawning(); }
+
+    // Start screen / Start button logic
+    const startScreen = document.getElementById('startScreen');
+    const startBtn = document.getElementById('startBtn');
+    startBtn.addEventListener('click', ()=>{
+      // unlock audio and give a tiny warm-up sound
+      audioUnlocked = true;
+      try{ zzfx(); }catch(_){}
+      startScreen.style.display = 'none';
+      gameStarted = true;
+      // begin spawning
+      startEnemySpawning();
+    });
+
+    // Expose difficulty setter for debug: window.setDifficulty(1.2)
+    window.setDifficulty = (v)=>{ DIFFICULTY = Math.max(0.2, Number(v) || 1.0); };
+	
+	function applyFilterFromJson(jsonObj) {
+	if (!jsonObj || !jsonObj.state) return;
+	for (const [variable, cfg] of Object.entries(jsonObj.state)) {
+	if (!variable || !cfg) continue;
+	let value = cfg.value || '';
+	if (cfg.suffix) {
+	value += cfg.suffix;
+	}
+	document.documentElement.style.setProperty(variable, value);
+	}
+}
+
+try {
+	const presetJson = { "author": "wolfmond", "state": { "--map-hue": { "value": "167", "suffix": "deg", "type": "range" }, "--map-sat": { "value": "1", "suffix": "", "type": "range" }, "--map-contrast": { "value": "1.1", "suffix": "", "type": "range" }, "--map-bright": { "value": "1", "suffix": "", "type": "range" }, "--map-invert": { "value": "0.93", "suffix": "", "type": "range" }, "--map-sepia": { "value": "0", "suffix": "", "type": "range" }, "--map-gray": { "value": "0", "suffix": "", "type": "range" }, "--map-blur": { "value": "0", "suffix": "px", "type": "range" }, "--map-shadow-x": { "value": "0", "suffix": "px", "type": "range" }, "--map-shadow-y": { "value": "0", "suffix": "px", "type": "range" }, "--map-shadow-blur": { "value": "0", "suffix": "px", "type": "range" }, "--map-shadow-color": { "value": "#000000", "suffix": "", "type": "color" }, "undefined": { "value": "", "suffix": "", "type": "file" } } };	
+
+	applyFilterFromJson(presetJson);
+	
+	} catch (err) {
+		console.error('night error', err);
+		alert('Fehler beim Aktivieren von Night-Mode: ' + (err && err.message ? err.message : err));
+	}
+
+// --- Fullscreen helpers ---
+function enterFullscreen() {
+  // bevorzugt: die Karten-Container-Element fullscreen setzen
+  const el = document.getElementById('gameRoot') || document.documentElement;
+  const request = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (request) {
+    try {
+      request.call(el).catch?.(()=>{}); // some browsers return a promise
+    } catch (err) {
+      // call may throw in older browsers; ignore and apply fallback
+    }
+  } else {
+    // Fullscreen API nicht verfügbar (z.B. iOS Safari) -> Fallback: Body-Klasse zum "simulierten" Fullscreen
+    document.documentElement.classList.add('pseudo-fullscreen');
+  }
+}
+
+function exitFullscreen() {
+  const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+  if (exit) {
+    try {
+      exit.call(document).catch?.(()=>{});
+    } catch (err) {
+      // ignore
+    }
+  }
+  // remove fallback class too
+  document.documentElement.classList.remove('pseudo-fullscreen');
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  document.documentElement.classList.toggle('in-fullscreen', isFs);
+});
+
+startBtn.addEventListener('click', ()=>{
+  // unlock audio und warm-up sound
+  audioUnlocked = true;
+  try{ zzfx(); }catch(_){}
+  // versuche fullscreen (muss in direktem Benutzerkontext aufgerufen werden)
+  enterFullscreen();
+
+  // hide start screen and begin game
+  startScreen.style.display = 'none';
+  gameStarted = true;
+  startEnemySpawning();
+});
+
+// Prevent context menu / selection on long press for specific UI areas
+(function(){
+  const selector = '.controls, .hud-left, .hud-right, .kills, .start-card, .fire';
+
+  // block context menu (long-press on mobile / right-click)
+  document.addEventListener('contextmenu', function(e){
+    if (e.target.closest && e.target.closest(selector)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // block selectionstart (some browsers)
+  document.addEventListener('selectstart', function(e){
+    if (e.target.closest && e.target.closest(selector)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // optional: block touch-hold that sometimes triggers selection/contextmenu
+  // (keep passive:false so preventDefault works on some browsers)
+  document.addEventListener('touchstart', function(e){
+    // if touch happens on our UI, prevent default behaviour that might lead to selection
+    if (e.target.closest && e.target.closest(selector)) {
+      // don't always preventDefault here (it can break gestures). Only prevent if multi-touch or longpress predictions required.
+      // We'll not call preventDefault here to avoid breaking taps; contextmenu/selectstart handlers are sufficient in most cases.
+    }
+  }, { passive: true });
+})();
+
+  </script>
+</body>
+</html>
